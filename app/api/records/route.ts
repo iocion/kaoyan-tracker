@@ -1,78 +1,137 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
-import { startOfDay } from 'date-fns'
+import { RecordService } from '@/lib/services/record.service'
+import { recordCreateSchema, recordQuerySchema } from '@/lib/validators'
 
 export const dynamic = 'force-dynamic'
 
-// 获取学习记录
-export async function GET() {
+/**
+ * GET /api/records
+ * 获取学习记录
+ */
+export async function GET(req: NextRequest) {
   try {
-    const userId = 'default'
-    
-    const records = await prisma.studyRecord.findMany({
-      where: { userId },
-      orderBy: { createdAt: 'desc' },
-      take: 50,
+    const { searchParams } = new URL(req.url)
+
+    // 验证查询参数
+    const validated = recordQuerySchema.parse({
+      limit: parseInt(searchParams.get('limit') || '50'),
+      subject: searchParams.get('subject') || undefined
     })
-    
-    return NextResponse.json(records)
-  } catch (error) {
-    return NextResponse.json({ error: '获取失败' }, { status: 500 })
+
+    let records
+
+    if (validated.subject) {
+      records = await RecordService.getBySubject(validated.subject, validated.limit)
+    } else {
+      records = await RecordService.getAll(validated.limit)
+    }
+
+    return NextResponse.json({
+      success: true,
+      data: records
+    })
+  } catch (error: any) {
+    console.error('[API] Get records error:', error)
+
+    if (error.name === 'ZodError') {
+      return NextResponse.json(
+        {
+          success: false,
+          error: '参数验证失败',
+          details: error.errors
+        },
+        { status: 400 }
+      )
+    }
+
+    return NextResponse.json(
+      {
+        success: false,
+        error: '获取记录失败'
+      },
+      { status: 500 }
+    )
   }
 }
 
-// 添加学习记录
-export async function POST(request: NextRequest) {
+/**
+ * POST /api/records
+ * 创建学习记录
+ */
+export async function POST(req: NextRequest) {
   try {
-    const userId = 'default'
-    const body = await request.json()
-    
-    const { subject, duration, notes } = body
-    
+    const body = await req.json()
+
+    // 验证输入
+    const validated = recordCreateSchema.parse(body)
+
     // 创建记录
-    const record = await prisma.studyRecord.create({
-      data: {
-        userId,
-        subject,
-        duration: parseFloat(duration),
-        notes,
+    const record = await RecordService.create(validated)
+
+    return NextResponse.json(
+      {
+        success: true,
+        data: record
       },
-    })
-    
-    // 更新每日统计
-    const today = startOfDay(new Date())
-    
-    const subjectFieldMap: Record<string, string> = {
-      'COMPUTER_408': 'hours408',
-      'MATH': 'hoursMath',
-      'ENGLISH': 'hoursEnglish',
-      'POLITICS': 'hoursPolitics',
-    }
-    
-    const subjectField = subjectFieldMap[subject] || 'hours408'
-    
-    await prisma.dailyStatistic.upsert({
-      where: {
-        userId_date: {
-          userId,
-          date: today,
+      { status: 201 }
+    )
+  } catch (error: any) {
+    console.error('[API] Create record error:', error)
+
+    if (error.name === 'ZodError') {
+      return NextResponse.json(
+        {
+          success: false,
+          error: '参数验证失败',
+          details: error.errors
         },
+        { status: 400 }
+      )
+    }
+
+    return NextResponse.json(
+      {
+        success: false,
+        error: '创建记录失败'
       },
-      update: {
-        totalHours: { increment: parseFloat(duration) },
-        [subjectField]: { increment: parseFloat(duration) },
-      },
-      create: {
-        userId,
-        date: today,
-        totalHours: parseFloat(duration),
-        [subjectField]: parseFloat(duration),
-      },
+      { status: 500 }
+    )
+  }
+}
+
+/**
+ * DELETE /api/records
+ * 删除学习记录
+ */
+export async function DELETE(req: NextRequest) {
+  try {
+    const body = await req.json()
+    const { id } = body
+
+    if (!id) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: '缺少记录 ID'
+        },
+        { status: 400 }
+      )
+    }
+
+    await RecordService.delete(id)
+
+    return NextResponse.json({
+      success: true,
+      data: { message: '记录已删除' }
     })
-    
-    return NextResponse.json(record, { status: 201 })
   } catch (error) {
-    console.error('Create record error:', error)
-    return NextResponse.json({ error: '创建失败' }, { status: 500 })
+    console.error('[API] Delete record error:', error)
+    return NextResponse.json(
+      {
+        success: false,
+        error: '删除记录失败'
+      },
+      { status: 500 }
+    )
   }
 }

@@ -1,199 +1,152 @@
-'use client'
-
-import { useState, useEffect } from 'react'
-import { SubjectPieChart } from '@/components/charts/pie-chart'
-import { formatHours, getSubjectColor, getSubjectName } from '@/lib/utils'
-import { Clock, BookOpen, BarChart3, Play, CheckCircle } from 'lucide-react'
 import Link from 'next/link'
+import { Clock, BarChart3, ArrowRight } from 'lucide-react'
 
-interface Stats {
-  hours408: number
-  hoursMath: number
-  hoursEnglish: number
-  hoursPolitics: number
-  pieData: Array<{ name: string; value: number; color: string }>
-  todayStats: {
-    totalHours: number
-    hours408: number
-    hoursMath: number
-    hoursEnglish: number
-    hoursPolitics: number
-  }
+export default function Home() {
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
+      <div className="container mx-auto px-4 py-16">
+        {/* Hero */}
+        <div className="text-center mb-16">
+          <div className="text-6xl mb-6">🍅</div>
+          <h1 className="text-5xl font-bold text-gray-900 dark:text-white mb-4">
+            考研番茄钟
+          </h1>
+          <p className="text-xl text-gray-600 dark:text-gray-400 mb-8 max-w-2xl mx-auto">
+            专注当下，成就未来。用科学的番茄工作法，高效管理考研学习时间。
+          </p>
+          <div className="flex justify-center gap-4">
+            <Link
+              href="/timer"
+              className="flex items-center gap-2 px-8 py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold text-lg transition-colors shadow-lg hover:shadow-xl"
+            >
+              <Clock className="w-5 h-5" />
+              开始学习
+              <ArrowRight className="w-5 h-5" />
+            </Link>
+            <Link
+              href="/records"
+              className="flex items-center gap-2 px-8 py-4 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-xl font-semibold text-lg transition-colors shadow-lg hover:shadow-xl"
+            >
+              <BarChart3 className="w-5 h-5" />
+              查看统计
+            </Link>
+          </div>
+        </div>
+
+        {/* Features */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto mb-16">
+          <FeatureCard
+            icon="⏱️"
+            title="番茄计时"
+            description="25分钟专注 + 5分钟休息，科学管理学习节奏"
+          />
+          <FeatureCard
+            icon="📋"
+            title="任务管理"
+            description="创建考研任务，追踪进度，一目了然"
+          />
+          <FeatureCard
+            icon="📊"
+            title="学习统计"
+            description="可视化学习数据，量化你的进步"
+          />
+        </div>
+
+        {/* Stats Preview */}
+        <div className="max-w-4xl mx-auto bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8 mb-16">
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6 text-center">
+            为什么选择番茄工作法？
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="flex gap-4">
+              <div className="flex-shrink-0 w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-xl flex items-center justify-center text-2xl">
+                🎯
+              </div>
+              <div>
+                <h3 className="font-semibold text-gray-900 dark:text-white mb-2">
+                  提高专注力
+                </h3>
+                <p className="text-gray-600 dark:text-gray-400">
+                  短时间高强度专注，避免疲劳，保持学习效率
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-4">
+              <div className="flex-shrink-0 w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-xl flex items-center justify-center text-2xl">
+                ⚡
+              </div>
+              <div>
+                <h3 className="font-semibold text-gray-900 dark:text-white mb-2">
+                  减少拖延
+                </h3>
+                <p className="text-gray-600 dark:text-gray-400">
+                  将大任务拆解为小番茄，降低心理压力
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-4">
+              <div className="flex-shrink-0 w-12 h-12 bg-purple-100 dark:bg-purple-900/30 rounded-xl flex items-center justify-center text-2xl">
+                📈
+              </div>
+              <div>
+                <h3 className="font-semibold text-gray-900 dark:text-white mb-2">
+                  可视化进步
+                </h3>
+                <p className="text-gray-600 dark:text-gray-400">
+                  统计学习数据，追踪每日进步，激励自己
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-4">
+              <div className="flex-shrink-0 w-12 h-12 bg-orange-100 dark:bg-orange-900/30 rounded-xl flex items-center justify-center text-2xl">
+                🔄
+              </div>
+              <div>
+                <h3 className="font-semibold text-gray-900 dark:text-white mb-2">
+                  形成习惯
+                </h3>
+                <p className="text-gray-600 dark:text-gray-400">
+                  持续使用番茄工作法，培养良好的学习习惯
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* CTA */}
+        <div className="text-center">
+          <div className="inline-block p-8 bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl shadow-2xl text-white">
+            <h2 className="text-3xl font-bold mb-4">
+              准备开始高效学习了吗？
+            </h2>
+            <p className="text-blue-100 mb-6 text-lg">
+              只需一个番茄钟，开启考研成功之路
+            </p>
+            <Link
+              href="/timer"
+              className="inline-flex items-center gap-2 px-8 py-4 bg-white text-blue-600 hover:bg-gray-50 rounded-xl font-semibold text-lg transition-colors"
+            >
+              立即开始
+              <ArrowRight className="w-5 h-5" />
+            </Link>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
 }
 
-export default function HomePage() {
-  const [stats, setStats] = useState<Stats | null>(null)
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    fetchStats()
-  }, [])
-
-  const fetchStats = async () => {
-    try {
-      const res = await fetch('/api/statistics?period=week')
-      if (res.ok) {
-        const data = await res.json()
-        setStats(data)
-      }
-    } catch (e) {
-      console.error(e)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin w-8 h-8 border-4 border-primary-500 border-t-transparent rounded-full"></div>
-      </div>
-    )
-  }
-
-  const todayHours = stats?.todayStats?.totalHours || 0
-  const goalHours = 10
-  const progress = Math.min((todayHours / goalHours) * 100, 100)
-
-  const subjects = [
-    { key: 'hours408', name: '408', color: '#3B82F6', hours: stats?.todayStats?.hours408 || 0 },
-    { key: 'hoursMath', name: '数学', color: '#10B981', hours: stats?.todayStats?.hoursMath || 0 },
-    { key: 'hoursEnglish', name: '英语', color: '#F59E0B', hours: stats?.todayStats?.hoursEnglish || 0 },
-    { key: 'hoursPolitics', name: '政治', color: '#EF4444', hours: stats?.todayStats?.hoursPolitics || 0 },
-  ]
-
+// 功能卡片组件
+function FeatureCard({ icon, title, description }: { icon: string; title: string; description: string }) {
   return (
-    <div className="min-h-screen bg-apple-gray-50 pb-28">
-      {/* 顶部导航 */}
-      <div className="fixed top-0 left-0 right-0 z-50 glass border-b border-apple-gray-200">
-        <div className="max-w-lg mx-auto px-5 py-4">
-          <h1 className="text-2xl font-semibold text-apple-gray-900 tracking-tight">考研学习助手</h1>
-        </div>
-      </div>
-
-      <div className="max-w-lg mx-auto px-5 pt-28 pb-4 space-y-6">
-        {/* 今日概览卡片 */}
-        <div className="gradient-primary rounded-apple-xl p-7 text-white shadow-apple-lg">
-          <p className="text-white/90 text-sm font-medium mb-3 tracking-wide">今日学习</p>
-
-          <div className="flex items-baseline gap-1 mb-5">
-            <span className="text-6xl font-semibold tracking-tight">{Math.floor(todayHours)}</span>
-            <span className="text-xl font-medium">小时</span>
-            <span className="text-3xl font-semibold">{Math.round((todayHours % 1) * 60)}</span>
-            <span className="text-xl font-medium">分</span>
-          </div>
-
-          <div className="bg-white/20 rounded-full h-2.5 mb-3">
-            <div
-              className="bg-white h-2.5 rounded-full transition-all duration-500 ease-out"
-              style={{ width: `${progress}%` }}
-            />
-          </div>
-
-          <p className="text-white/80 text-sm">目标 {goalHours} 小时 · 已完成 {Math.round(progress)}%</p>
-        </div>
-
-        {/* 快捷操作 */}
-        <div className="grid grid-cols-2 gap-4">
-          <Link
-            href="/timer"
-            className="gradient-card rounded-apple-sm p-5 shadow-apple-sm hover:shadow-apple transition-all duration-300 flex items-center gap-4 group"
-          >
-            <div className="w-14 h-14 rounded-full flex items-center justify-center group-hover:scale-105 transition-transform duration-300">
-              <Play className="w-7 h-7 text-primary-500 fill-current" />
-            </div>
-            <div>
-              <p className="font-semibold text-apple-gray-900 text-base">开始学习</p>
-              <p className="text-sm text-apple-gray-400 mt-0.5">记录专注时刻</p>
-            </div>
-          </Link>
-
-          <Link
-            href="/records"
-            className="gradient-card rounded-apple-sm p-5 shadow-apple-sm hover:shadow-apple transition-all duration-300 flex items-center gap-4 group"
-          >
-            <div className="w-14 h-14 rounded-full flex items-center justify-center group-hover:scale-105 transition-transform duration-300">
-              <BookOpen className="w-7 h-7 text-primary-500" />
-            </div>
-            <div>
-              <p className="font-semibold text-apple-gray-900 text-base">学习记录</p>
-              <p className="text-sm text-apple-gray-400 mt-0.5">查看历史数据</p>
-            </div>
-          </Link>
-        </div>
-
-        {/* 学科统计 */}
-        <div className="card-apple-lg p-6">
-          <h2 className="text-lg font-semibold text-apple-gray-900 mb-5 tracking-tight">今日学科分布</h2>
-
-          {stats?.pieData && stats.pieData.length > 0 ? (
-            <SubjectPieChart data={stats.pieData} />
-          ) : (
-            <div className="h-48 flex items-center justify-center">
-              <div className="text-center">
-                <CheckCircle className="w-14 h-14 text-apple-gray-300 mx-auto mb-3" />
-                <p className="text-apple-gray-500 font-medium">今日暂无学习记录</p>
-              </div>
-            </div>
-          )}
-
-          <div className="grid grid-cols-2 gap-3 mt-6">
-            {subjects.map((sub) => (
-              <div key={sub.key} className="bg-apple-gray-50 rounded-apple-sm p-4 hover:bg-apple-gray-100 transition-colors">
-                <div className="flex items-center gap-2.5 mb-2">
-                  <div
-                    className="w-3 h-3 rounded-full shadow-sm"
-                    style={{ backgroundColor: sub.color }}
-                  />
-                  <span className="text-sm font-medium text-apple-gray-700">{sub.name}</span>
-                </div>
-                <p className="text-2xl font-semibold tracking-tight" style={{ color: sub.color }}>
-                  {formatHours(sub.hours)}
-                </p>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* 本周统计 */}
-        <div className="card-apple-lg p-6">
-          <h2 className="text-lg font-semibold text-apple-gray-900 mb-5 tracking-tight">本周学习</h2>
-
-          <div className="grid grid-cols-4 gap-2">
-            {[
-              { label: '408', hours: stats?.hours408 || 0, color: '#3B82F6' },
-              { label: '数学', hours: stats?.hoursMath || 0, color: '#10B981' },
-              { label: '英语', hours: stats?.hoursEnglish || 0, color: '#F59E0B' },
-              { label: '政治', hours: stats?.hoursPolitics || 0, color: '#EF4444' },
-            ].map((item) => (
-              <div key={item.label} className="text-center py-3 rounded-apple-sm hover:bg-apple-gray-50 transition-colors">
-                <p className="text-xs text-apple-gray-400 mb-2 font-medium">{item.label}</p>
-                <p className="text-xl font-bold tracking-tight" style={{ color: item.color }}>
-                  {Math.round(item.hours * 10) / 10}h
-                </p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* 底部导航 */}
-      <nav className="fixed bottom-0 left-0 right-0 glass border-t border-apple-gray-200">
-        <div className="max-w-lg mx-auto flex justify-around py-3">
-          <Link href="/" className="flex flex-col items-center px-5 py-2 rounded-xl transition-all duration-300 text-primary-600">
-            <BarChart3 className="w-6 h-6" strokeWidth={2} />
-            <span className="text-xs mt-1 font-medium">概览</span>
-          </Link>
-          <Link href="/timer" className="flex flex-col items-center px-5 py-2 rounded-xl transition-all duration-300 text-apple-gray-400 hover:text-apple-gray-600">
-            <Clock className="w-6 h-6" strokeWidth={2} />
-            <span className="text-xs mt-1 font-medium">计时</span>
-          </Link>
-          <Link href="/records" className="flex flex-col items-center px-5 py-2 rounded-xl transition-all duration-300 text-apple-gray-400 hover:text-apple-gray-600">
-            <BookOpen className="w-6 h-6" strokeWidth={2} />
-            <span className="text-xs mt-1 font-medium">记录</span>
-          </Link>
-        </div>
-      </nav>
+    <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 hover:shadow-xl transition-shadow">
+      <div className="text-4xl mb-4">{icon}</div>
+      <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
+        {title}
+      </h3>
+      <p className="text-gray-600 dark:text-gray-400">
+        {description}
+      </p>
     </div>
   )
 }

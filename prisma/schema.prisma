@@ -10,56 +10,95 @@ datasource db {
 
 model User {
   id        String   @id @default(cuid())
-  email     String   @unique @default("")
   name      String   @default("考研人")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  records    StudyRecord[]
-  timerSessions TimerSession[]
-  dailyStats DailyStatistic[]
+  tasks         Task[]
+  pomodoros     Pomodoro[]
+  dailyStats    DailyStat[]
+  settings      UserSettings?
 }
 
-model StudyRecord {
-  id        String   @id @default(cuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  subject   Subject
-  duration  Float    @db.Real
-  notes     String?  @db.Text
-  createdAt DateTime @default(now())
-
-  @@index([userId, subject])
-  @@index([createdAt])
+model UserSettings {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  focusDuration   Int      @default(25) // 专注时长（分钟）
+  breakDuration   Int      @default(5)  // 休息时长（分钟）
+  longBreakDuration Int    @default(15) // 长休息时长（分钟）
+  pomodorosUntilLongBreak Int @default(4) // 几个番茄后长休息
+  autoStartBreak  Boolean  @default(false) // 自动开始休息
+  autoStartFocus  Boolean  @default(false) // 自动开始专注
+  soundEnabled    Boolean  @default(true) // 声音提醒
+  vibrationEnabled Boolean @default(true) // 震动提醒
 }
 
-model TimerSession {
-  id        String    @id @default(cuid())
-  userId    String
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  subject   Subject
-  title     String?   @db.VarChar(100)
-  startTime DateTime
-  endTime   DateTime?
-  duration  Float?    @db.Real
-  isRunning Boolean   @default(false)
-  createdAt DateTime  @default(now())
+model Task {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title       String    @db.VarChar(200)
+  subject     Subject
+  estimatedPomodoros Int @default(1) // 预计番茄数
+  completedPomodoros Int @default(0) // 已完成番茄数
+  isCompleted Boolean   @default(false)
+  isActive    Boolean   @default(false) // 当前正在进行的任务
+  createdAt   DateTime  @default(now())
+  completedAt DateTime?
 
-  @@index([userId, isRunning])
-  @@index([userId, startTime])
+  pomodoros   Pomodoro[]
+
+  @@index([userId, isCompleted])
+  @@index([userId, isActive])
 }
 
-model DailyStatistic {
-  id            String   @id @default(cuid())
-  userId        String
-  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  date          DateTime @db.Date
-  totalHours    Float    @default(0) @db.Real
-  hours408      Float    @default(0) @db.Real
-  hoursMath     Float    @default(0) @db.Real
-  hoursEnglish  Float    @default(0) @db.Real
-  hoursPolitics Float    @default(0) @db.Real
-  createdAt     DateTime @default(now())
+model Pomodoro {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  taskId      String?
+  task        Task?     @relation(fields: [taskId], references: [id], onDelete: SetNull)
+  
+  type        PomodoroType // FOCUS, BREAK, LONG_BREAK
+  status      PomodoroStatus // RUNNING, PAUSED, COMPLETED, CANCELLED
+  
+  duration    Int       // 计划时长（秒）
+  elapsedTime Int       @default(0) // 已用时间（秒）
+  
+  startedAt   DateTime  @default(now())
+  endedAt     DateTime?
+  
+  // 暂停记录
+  pauseCount  Int       @default(0)
+  totalPausedTime Int   @default(0) // 总共暂停的时间（秒）
+
+  @@index([userId, status])
+  @@index([userId, startedAt])
+}
+
+model DailyStat {
+  id              String   @id @default(cuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date            DateTime @db.Date
+  
+  // 番茄统计
+  totalPomodoros  Int      @default(0)
+  totalFocusTime  Int      @default(0) // 专注时间（秒）
+  totalBreakTime  Int      @default(0) // 休息时间（秒）
+  
+  // 学科分布（番茄数）
+  pomodoros408    Int      @default(0)
+  pomodorosMath   Int      @default(0)
+  pomodorosEnglish Int     @default(0)
+  pomodorosPolitics Int    @default(0)
+  
+  // 任务统计
+  completedTasks  Int      @default(0)
+  createdTasks    Int      @default(0)
+  
+  createdAt       DateTime @default(now())
 
   @@unique([userId, date])
 }
@@ -69,4 +108,17 @@ enum Subject {
   MATH
   ENGLISH
   POLITICS
+}
+
+enum PomodoroType {
+  FOCUS
+  BREAK
+  LONG_BREAK
+}
+
+enum PomodoroStatus {
+  RUNNING
+  PAUSED
+  COMPLETED
+  CANCELLED
 }
