@@ -217,31 +217,38 @@ export class PomodoroService {
     const userId = pomodoro.userId
 
     // 获取学科字段映射
-    const subjectField = this.getSubjectField(pomodoro.taskId)
+    const subjectField = await this.getSubjectField(pomodoro.taskId)
 
     // 更新或创建每日统计
+    const updateData: any = {
+      totalPomodoros: { increment: 1 },
+      ...(pomodoro.type === PomodoroType.FOCUS && {
+        totalFocusTime: { increment: pomodoro.elapsedTime }
+      }),
+      ...(pomodoro.type !== PomodoroType.FOCUS && {
+        totalBreakTime: { increment: pomodoro.elapsedTime }
+      })
+    }
+
+    const createData: any = {
+      userId,
+      date: today,
+      totalPomodoros: 1,
+      totalFocusTime: pomodoro.type === PomodoroType.FOCUS ? pomodoro.elapsedTime : 0,
+      totalBreakTime: pomodoro.type !== PomodoroType.FOCUS ? pomodoro.elapsedTime : 0
+    }
+
+    if (subjectField) {
+      updateData[subjectField] = { increment: 1 }
+      createData[subjectField] = 1
+    }
+
     await prisma.dailyStat.upsert({
       where: {
         userId_date: { userId, date: today }
       },
-      update: {
-        totalPomodoros: { increment: 1 },
-        ...(pomodoro.type === PomodoroType.FOCUS && {
-          totalFocusTime: { increment: pomodoro.elapsedTime }
-        }),
-        ...(pomodoro.type !== PomodoroType.FOCUS && {
-          totalBreakTime: { increment: pomodoro.elapsedTime }
-        }),
-        ...(subjectField && { [subjectField]: { increment: 1 } })
-      },
-      create: {
-        userId,
-        date: today,
-        totalPomodoros: 1,
-        totalFocusTime: pomodoro.type === PomodoroType.FOCUS ? pomodoro.elapsedTime : 0,
-        totalBreakTime: pomodoro.type !== PomodoroType.FOCUS ? pomodoro.elapsedTime : 0,
-        ...(subjectField && { [subjectField]: 1 })
-      }
+      update: updateData,
+      create: createData
     })
   }
 

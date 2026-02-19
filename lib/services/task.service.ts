@@ -136,7 +136,7 @@ export class TaskService {
 
       // 如果标记为完成，记录完成时间
       const updateData: any = { ...input }
-      if (input.isCompleted && !input.completedAt) {
+      if (input.isCompleted === true) {
         updateData.completedAt = new Date()
       }
 

@@ -73,7 +73,7 @@ export function useTimer(options: UseTimerOptions = {}): UseTimerReturn {
 
   // 开始番茄钟
   const start = useCallback(async (
-    taskId?: string,
+    taskId?: string | null,
     type: PomodoroType = PomodoroType.FOCUS,
     duration: number = 25
   ) => {

@@ -6,7 +6,7 @@ import { Subject, PomodoroType, PomodoroStatus } from '@/types'
 export const pomodoroCreateSchema = z.object({
   taskId: z.string().optional().nullable(),
   type: z.nativeEnum(PomodoroType, {
-    errorMap: () => ({ message: '无效的番茄钟类型' })
+    message: '无效的番茄钟类型'
   }),
   duration: z.number()
     .min(1, '时长至少 1 分钟')
@@ -16,7 +16,7 @@ export const pomodoroCreateSchema = z.object({
 export const pomodoroUpdateSchema = z.object({
   id: z.string().min(1, '番茄钟 ID 不能为空'),
   status: z.nativeEnum(PomodoroStatus, {
-    errorMap: () => ({ message: '无效的状态' })
+    message: '无效的状态'
   }),
   elapsedTime: z.number()
     .min(0, '已用时间不能为负数')
@@ -45,7 +45,7 @@ export const taskCreateSchema = z.object({
     .min(1, '任务标题不能为空')
     .max(200, '任务标题不能超过 200 字符'),
   subject: z.nativeEnum(Subject, {
-    errorMap: () => ({ message: '无效的学科类型' })
+    message: '无效的学科类型'
   }),
   estimatedPomodoros: z.number()
     .min(1, '预计番茄数至少为 1')
@@ -61,7 +61,7 @@ export const taskUpdateSchema = z.object({
     .max(200, '任务标题不能超过 200 字符')
     .optional(),
   subject: z.nativeEnum(Subject, {
-    errorMap: () => ({ message: '无效的学科类型' })
+    message: '无效的学科类型'
   }).optional(),
   estimatedPomodoros: z.number()
     .min(1, '预计番茄数至少为 1')
@@ -116,7 +116,7 @@ export const statsQuerySchema = z.object({
 
 export const recordCreateSchema = z.object({
   subject: z.nativeEnum(Subject, {
-    errorMap: () => ({ message: '无效的学科类型' })
+    message: '无效的学科类型'
   }),
   duration: z.number()
     .min(0.1, '学习时长至少 0.1 小时')
