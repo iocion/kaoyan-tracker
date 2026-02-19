@@ -127,7 +127,7 @@ export default function HomePage() {
           <h2 className="text-lg font-bold text-apple-gray-900 mb-4">今日学科分布</h2>
           
           {stats?.pieData && stats.pieData.length > 0 ? (
-            <SubjectPieChart data={stats.pieData} /
+            <SubjectPieChart data={stats.pieData} />
           ) : (
             <div className="h-48 flex items-center justify-center text-gray-400">
               今日暂无学习记录
