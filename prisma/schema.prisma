@@ -1,0 +1,72 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("POSTGRES_PRISMA_URL")
+  directUrl = env("POSTGRES_URL_NON_POOLING")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique @default("")
+  name      String   @default("考研人")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  records    StudyRecord[]
+  timerSessions TimerSession[]
+  dailyStats DailyStatistic[]
+}
+
+model StudyRecord {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subject   Subject
+  duration  Float    @db.Real
+  notes     String?  @db.Text
+  createdAt DateTime @default(now())
+
+  @@index([userId, subject])
+  @@index([createdAt])
+}
+
+model TimerSession {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subject   Subject
+  title     String?   @db.VarChar(100)
+  startTime DateTime
+  endTime   DateTime?
+  duration  Float?    @db.Real
+  isRunning Boolean   @default(false)
+  createdAt DateTime  @default(now())
+
+  @@index([userId, isRunning])
+  @@index([userId, startTime])
+}
+
+model DailyStatistic {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date          DateTime @db.Date
+  totalHours    Float    @default(0) @db.Real
+  hours408      Float    @default(0) @db.Real
+  hoursMath     Float    @default(0) @db.Real
+  hoursEnglish  Float    @default(0) @db.Real
+  hoursPolitics Float    @default(0) @db.Real
+  createdAt     DateTime @default(now())
+
+  @@unique([userId, date])
+}
+
+enum Subject {
+  COMPUTER_408
+  MATH
+  ENGLISH
+  POLITICS
+}
