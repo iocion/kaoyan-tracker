@@ -6,9 +6,15 @@ const globalForPrisma = globalThis as unknown as {
 
 const prismaClientSingleton = () => {
   return new PrismaClient({
-    log: process.env.NODE_ENV === 'development' 
-      ? ['query', 'error', 'warn'] 
+    log: process.env.NODE_ENV === 'development'
+      ? ['query', 'error', 'warn']
       : ['error'],
+    // Neon 连接池配置
+    datasources: {
+      db: {
+        url: process.env.POSTGRES_URL || process.env.DATABASE_URL
+      }
+    }
   })
 }
 
