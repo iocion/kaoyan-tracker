@@ -279,7 +279,7 @@ export class PomodoroService {
   /**
    * 获取学科字段映射
    */
-  private static async getSubjectField(taskId: string | null): Promise<string | null> {
+  private static async getSubjectField(taskId: string | null | undefined): Promise<string | null> {
     if (!taskId) return null
 
     const task = await prisma.task.findUnique({

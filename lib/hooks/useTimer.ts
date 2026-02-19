@@ -16,7 +16,7 @@ interface UseTimerReturn {
   progress: number // 进度百分比 0-100
 
   // 操作
-  start: (taskId?: string, type?: PomodoroType, duration?: number) => Promise<void>
+  start: (taskId?: string | null, type?: PomodoroType, duration?: number) => Promise<void>
   pause: () => Promise<void>
   resume: () => Promise<void>
   complete: () => Promise<void>
