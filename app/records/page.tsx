@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { ChevronLeft, Plus, Clock } from 'lucide-react'
+import { ChevronLeft, Plus, Clock, CheckCircle2 } from 'lucide-react'
 import Link from 'next/link'
 import { format } from 'date-fns'
 import { zhCN } from 'date-fns/locale'
@@ -22,11 +22,11 @@ export default function RecordsPage() {
   const [subject, setSubject] = useState('COMPUTER_408')
   const [duration, setDuration] = useState('')
   const [notes, setNotes] = useState('')
-  
+
   useEffect(() => {
     fetchRecords()
   }, [])
-  
+
   const fetchRecords = async () => {
     try {
       const res = await fetch('/api/records')
@@ -40,12 +40,12 @@ export default function RecordsPage() {
       setLoading(false)
     }
   }
-  
+
   const submitRecord = async (e: React.FormEvent) => {
     e.preventDefault()
-    
+
     if (!duration) return
-    
+
     await fetch('/api/records', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -55,20 +55,20 @@ export default function RecordsPage() {
         notes,
       }),
     })
-    
+
     setDuration('')
     setNotes('')
     setShowForm(false)
     fetchRecords()
   }
-  
+
   const subjects = [
     { key: 'COMPUTER_408', name: '计算机408', color: '#3B82F6' },
     { key: 'MATH', name: '数学', color: '#10B981' },
     { key: 'ENGLISH', name: '英语', color: '#F59E0B' },
     { key: 'POLITICS', name: '政治', color: '#EF4444' },
   ]
-  
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -76,50 +76,53 @@ export default function RecordsPage() {
       </div>
     )
   }
-  
+
   return (
-    <div className="min-h-screen bg-apple-gray-50 pb-24">
+    <div className="min-h-screen bg-apple-gray-50 pb-28">
       {/* 顶部导航 */}
-      <div className="bg-white/80 backdrop-blur-xl sticky top-0 z-10 border-b border-apple-gray-100">
-        <div className="max-w-lg mx-auto px-4 py-4 flex items-center justify-between">
+      <div className="fixed top-0 left-0 right-0 z-50 glass border-b border-apple-gray-200">
+        <div className="max-w-lg mx-auto px-5 py-4 flex items-center justify-between">
           <div className="flex items-center">
-            <Link href="/" className="p-2 -ml-2 hover:bg-gray-100 rounded-full transition-colors">
-              <ChevronLeft className="w-6 h-6 text-gray-600" />
+            <Link
+              href="/"
+              className="p-2.5 -ml-2 hover:bg-apple-gray-100 rounded-full transition-all duration-300"
+            >
+              <ChevronLeft className="w-6 h-6 text-apple-gray-600" />
             </Link>
-            <h1 className="text-xl font-bold text-apple-gray-900 ml-2">学习记录</h1>
+            <h1 className="text-xl font-semibold text-apple-gray-900 ml-3 tracking-tight">学习记录</h1>
           </div>
-          
+
           <button
             onClick={() => setShowForm(!showForm)}
-            className="p-2 bg-primary-500 hover:bg-primary-600 text-white rounded-full transition-colors"
+            className="p-2.5 gradient-primary hover:opacity-90 text-white rounded-full shadow-apple-sm transition-all duration-300"
           >
-            <Plus className="w-5 h-5" />
+            <Plus className="w-5 h-5" strokeWidth={2.5} />
           </button>
         </div>
       </div>
-      
-      <div className="max-w-lg mx-auto px-4 py-6 space-y-4">
+
+      <div className="max-w-lg mx-auto px-5 pt-28 pb-6 space-y-5">
         {/* 添加记录表单 */}
         {showForm && (
-          <div className="bg-white rounded-3xl p-5 shadow-sm">
-            <h3 className="font-semibold text-lg mb-4">添加学习记录</h3>
-            
-            <form onSubmit={submitRecord} className="space-y-4">
+          <div className="card-apple-lg p-6 animate-in slide-in-from-top-4 duration-300">
+            <h3 className="font-semibold text-lg mb-5 tracking-tight text-apple-gray-900">添加学习记录</h3>
+
+            <form onSubmit={submitRecord} className="space-y-5">
               <div>
-                <label className="block text-sm font-medium text-gray-500 mb-2">学科</label>
+                <label className="block text-sm font-medium text-apple-gray-500 mb-3 tracking-wide">学科</label>
                 <select
                   value={subject}
                   onChange={(e) => setSubject(e.target.value)}
-                  className="w-full px-4 py-3 bg-apple-gray-50 rounded-xl border-0"
+                  className="w-full px-5 py-4 bg-apple-gray-50 rounded-apple-sm border-0 focus:ring-2 focus:ring-primary-500 focus:bg-white transition-all duration-300 text-apple-gray-900 font-medium"
                 >
                   {subjects.map((s) => (
                     <option key={s.key} value={s.key}>{s.name}</option>
                   ))}
                 </select>
               </div>
-              
+
               <div>
-                <label className="block text-sm font-medium text-gray-500 mb-2">时长（小时）</label>
+                <label className="block text-sm font-medium text-apple-gray-500 mb-3 tracking-wide">时长（小时）</label>
                 <input
                   type="number"
                   step="0.5"
@@ -127,33 +130,33 @@ export default function RecordsPage() {
                   value={duration}
                   onChange={(e) => setDuration(e.target.value)}
                   placeholder="例如：2.5"
-                  className="w-full px-4 py-3 bg-apple-gray-50 rounded-xl border-0"
+                  className="w-full px-5 py-4 bg-apple-gray-50 rounded-apple-sm border-0 focus:ring-2 focus:ring-primary-500 focus:bg-white transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
                   required
                 />
               </div>
-              
+
               <div>
-                <label className="block text-sm font-medium text-gray-500 mb-2">备注（可选）</label>
+                <label className="block text-sm font-medium text-apple-gray-500 mb-3 tracking-wide">备注（可选）</label>
                 <input
                   type="text"
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
                   placeholder="学习内容..."
-                  className="w-full px-4 py-3 bg-apple-gray-50 rounded-xl border-0"
+                  className="w-full px-5 py-4 bg-apple-gray-50 rounded-apple-sm border-0 focus:ring-2 focus:ring-primary-500 focus:bg-white transition-all duration-300"
                 />
               </div>
-              
+
               <div className="flex gap-3">
                 <button
                   type="submit"
-                  className="flex-1 py-3 bg-primary-500 hover:bg-primary-600 text-white rounded-xl font-medium"
+                  className="flex-1 py-4 gradient-primary hover:opacity-90 text-white rounded-apple-sm font-semibold shadow-apple-sm transition-all duration-300"
                 >
                   保存
                 </button>
                 <button
                   type="button"
                   onClick={() => setShowForm(false)}
-                  className="flex-1 py-3 bg-apple-gray-200 hover:bg-apple-gray-300 rounded-xl font-medium"
+                  className="flex-1 py-4 bg-apple-gray-200 hover:bg-apple-gray-300 text-apple-gray-800 rounded-apple-sm font-semibold transition-all duration-300"
                 >
                   取消
                 </button>
@@ -161,40 +164,45 @@ export default function RecordsPage() {
             </form>
           </div>
         )}
-        
+
         {/* 记录列表 */}
-        <div className="space-y-3">
+        <div className="space-y-4">
           {records.length === 0 ? (
-            <div className="text-center py-12">
-              <Clock className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-              <p className="text-gray-500">暂无学习记录</p>
-              <p className="text-sm text-gray-400 mt-1">点击右上角 + 添加记录</p>
+            <div className="text-center py-16">
+              <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-apple-gray-100 mb-5">
+                <Clock className="w-10 h-10 text-apple-gray-300" strokeWidth={1.5} />
+              </div>
+              <p className="text-apple-gray-500 font-semibold mb-2">暂无学习记录</p>
+              <p className="text-sm text-apple-gray-400">点击右上角 + 添加记录</p>
             </div>
           ) : (
             records.map((record) => (
-              <div key={record.id} className="bg-white rounded-2xl p-4 shadow-sm">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
+              <div
+                key={record.id}
+                className="card-apple p-5 hover:shadow-apple-sm transition-all duration-300"
+              >
+                <div className="flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-4 flex-1 min-w-0">
                     <div
-                      className="w-10 h-10 rounded-full flex items-center justify-center text-white font-medium"
+                      className="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-lg flex-shrink-0 shadow-sm"
                       style={{ backgroundColor: getSubjectColor(record.subject) }}
                     >
                       {getSubjectName(record.subject)[0]}
                     </div>
-                    
-                    <div>
-                      <p className="font-medium">{getSubjectName(record.subject)}</p>
+
+                    <div className="min-w-0 flex-1">
+                      <p className="font-semibold text-apple-gray-900 text-base truncate">{getSubjectName(record.subject)}</p>
                       {record.notes && (
-                        <p className="text-sm text-gray-500">{record.notes}</p>
+                        <p className="text-sm text-apple-gray-500 truncate mt-0.5">{record.notes}</p>
                       )}
                     </div>
                   </div>
-                  
-                  <div className="text-right">
-                    <p className="font-bold text-lg" style={{ color: getSubjectColor(record.subject) }}>
+
+                  <div className="flex-shrink-0 text-right">
+                    <p className="text-2xl font-bold tracking-tight" style={{ color: getSubjectColor(record.subject) }}>
                       {formatHours(record.duration)}
                     </p>
-                    <p className="text-xs text-gray-400">
+                    <p className="text-xs text-apple-gray-400 mt-1">
                       {format(new Date(record.createdAt), 'MM-dd HH:mm', { locale: zhCN })}
                     </p>
                   </div>

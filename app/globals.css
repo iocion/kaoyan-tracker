@@ -6,10 +6,12 @@
   * {
     @apply border-apple-gray-200;
   }
-  
+
   body {
     @apply bg-apple-gray-50 text-apple-gray-900 antialiased;
-    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Segoe UI', Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 }
 
@@ -17,8 +19,20 @@
   .glass {
     @apply bg-white/80 backdrop-blur-xl;
   }
-  
+
   .card-apple {
-    @apply bg-white rounded-apple shadow-apple border border-apple-gray-100;
+    @apply bg-white rounded-apple-sm shadow-apple-sm border border-apple-gray-100;
+  }
+
+  .card-apple-lg {
+    @apply bg-white rounded-apple shadow-apple-lg border border-apple-gray-100;
+  }
+
+  .gradient-primary {
+    @apply bg-gradient-to-br from-primary-500 to-primary-600;
+  }
+
+  .gradient-card {
+    @apply bg-gradient-to-br from-white to-apple-gray-50;
   }
 }
