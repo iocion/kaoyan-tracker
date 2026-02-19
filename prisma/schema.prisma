@@ -18,6 +18,7 @@ model User {
   pomodoros     Pomodoro[]
   dailyStats    DailyStat[]
   settings      UserSettings?
+  studyRecords  StudyRecord[]
 }
 
 model UserSettings {
@@ -82,25 +83,37 @@ model DailyStat {
   userId          String
   user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   date            DateTime @db.Date
-  
+
   // 番茄统计
   totalPomodoros  Int      @default(0)
   totalFocusTime  Int      @default(0) // 专注时间（秒）
   totalBreakTime  Int      @default(0) // 休息时间（秒）
-  
+
   // 学科分布（番茄数）
   pomodoros408    Int      @default(0)
   pomodorosMath   Int      @default(0)
   pomodorosEnglish Int     @default(0)
   pomodorosPolitics Int    @default(0)
-  
+
   // 任务统计
   completedTasks  Int      @default(0)
   createdTasks    Int      @default(0)
-  
+
   createdAt       DateTime @default(now())
 
   @@unique([userId, date])
+}
+
+model StudyRecord {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subject   Subject
+  duration  Float    // 学习时长（小时）
+  notes     String?
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
 }
 
 enum Subject {

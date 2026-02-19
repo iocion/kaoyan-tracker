@@ -82,9 +82,6 @@ export class RecordService {
         }
       })
 
-      // 更新每日统计
-      await this.updateDailyStats(input)
-
       return record as StudyRecord
     } catch (error) {
       console.error('[RecordService] Create error:', error)
@@ -195,39 +192,5 @@ export class RecordService {
     }))
 
     return { total, bySubject, byDay }
-  }
-
-  /**
-   * 更新每日统计
-   */
-  private static async updateDailyStats(input: StudyRecordCreateInput): Promise<void> {
-    const today = startOfDay(new Date())
-    const subjectFieldMap: Record<Subject, string> = {
-      [Subject.COMPUTER_408]: 'hours408',
-      [Subject.MATH]: 'hoursMath',
-      [Subject.ENGLISH]: 'hoursEnglish',
-      [Subject.POLITICS]: 'hoursPolitics'
-    }
-
-    const subjectField = subjectFieldMap[input.subject]
-
-    await prisma.dailyStatistic.upsert({
-      where: {
-        userId_date: {
-          userId: this.DEFAULT_USER_ID,
-          date: today
-        }
-      },
-      update: {
-        totalHours: { increment: input.duration },
-        ...(subjectField && { [subjectField]: { increment: input.duration } })
-      },
-      create: {
-        userId: this.DEFAULT_USER_ID,
-        date: today,
-        totalHours: input.duration,
-        ...(subjectField && { [subjectField]: input.duration })
-      }
-    })
   }
 }
