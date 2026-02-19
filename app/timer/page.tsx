@@ -41,20 +41,41 @@ export default function TimerPage() {
 
   // 开始专注
   const handleStartFocus = async (taskId?: string) => {
-    const duration = settings?.focusDuration || 25
-    await start(taskId, PomodoroType.FOCUS, duration)
+    try {
+      console.log('[Timer] Starting focus with taskId:', taskId)
+      const duration = settings?.focusDuration || 25
+      await start(taskId, PomodoroType.FOCUS, duration)
+      console.log('[Timer] Focus started successfully')
+    } catch (error) {
+      console.error('[Timer] Failed to start focus:', error)
+      alert('开始专注失败，请稍后重试')
+    }
   }
 
   // 开始休息
   const handleStartBreak = async () => {
-    const duration = settings?.breakDuration || 5
-    await start(null, PomodoroType.BREAK, duration)
+    try {
+      console.log('[Timer] Starting break')
+      const duration = settings?.breakDuration || 5
+      await start(null, PomodoroType.BREAK, duration)
+      console.log('[Timer] Break started successfully')
+    } catch (error) {
+      console.error('[Timer] Failed to start break:', error)
+      alert('开始休息失败，请稍后重试')
+    }
   }
 
   // 开始长休息
   const handleStartLongBreak = async () => {
-    const duration = settings?.longBreakDuration || 15
-    await start(null, PomodoroType.LONG_BREAK, duration)
+    try {
+      console.log('[Timer] Starting long break')
+      const duration = settings?.longBreakDuration || 15
+      await start(null, PomodoroType.LONG_BREAK, duration)
+      console.log('[Timer] Long break started successfully')
+    } catch (error) {
+      console.error('[Timer] Failed to start long break:', error)
+      alert('开始长休息失败，请稍后重试')
+    }
   }
 
   return (

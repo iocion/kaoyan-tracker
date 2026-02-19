@@ -28,7 +28,8 @@ export async function GET() {
     return NextResponse.json(
       {
         success: false,
-        error: '获取番茄钟失败'
+        error: '获取番茄钟失败',
+        details: error instanceof Error ? error.message : String(error)
       },
       { status: 500 }
     )
@@ -43,11 +44,15 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
 
+    console.log('[API] POST /api/pomodoro body:', body)
+
     // 验证输入
     const validated = pomodoroCreateSchema.parse(body)
+    console.log('[API] Validated input:', validated)
 
     // 开始番茄钟
     const pomodoro = await PomodoroService.start(validated)
+    console.log('[API] Created pomodoro:', pomodoro)
 
     return NextResponse.json(
       {
@@ -74,7 +79,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(
       {
         success: false,
-        error: '开始番茄钟失败'
+        error: '开始番茄钟失败',
+        details: error instanceof Error ? error.message : String(error)
       },
       { status: 500 }
     )
@@ -90,26 +96,32 @@ export async function PATCH(req: NextRequest) {
     const body = await req.json()
     const { action } = body
 
+    console.log('[API] PATCH /api/pomodoro action:', action, 'body:', body)
+
     // 根据不同的操作进行验证和处理
     switch (action) {
       case 'pause':
         await pomodoroPauseSchema.parseAsync(body)
         const paused = await PomodoroService.pause(body.id)
+        console.log('[API] Paused pomodoro:', paused)
         return NextResponse.json({ success: true, data: paused })
 
       case 'resume':
         await pomodoroResumeSchema.parseAsync(body)
         const resumed = await PomodoroService.resume(body.id)
+        console.log('[API] Resumed pomodoro:', resumed)
         return NextResponse.json({ success: true, data: resumed })
 
       case 'complete':
         await pomodoroCompleteSchema.parseAsync(body)
         const completed = await PomodoroService.complete(body.id)
+        console.log('[API] Completed pomodoro:', completed)
         return NextResponse.json({ success: true, data: completed })
 
       case 'cancel':
         await pomodoroCancelSchema.parseAsync(body)
         const cancelled = await PomodoroService.cancel(body.id)
+        console.log('[API] Cancelled pomodoro:', cancelled)
         return NextResponse.json({ success: true, data: cancelled })
 
       case 'update':
@@ -118,13 +130,15 @@ export async function PATCH(req: NextRequest) {
           status: body.status,
           elapsedTime: body.elapsedTime
         })
+        console.log('[API] Updated pomodoro:', updated)
         return NextResponse.json({ success: true, data: updated })
 
       default:
         return NextResponse.json(
           {
             success: false,
-            error: '无效的操作类型'
+            error: '无效的操作类型',
+            details: `Action "${action}" is not recognized`
           },
           { status: 400 }
         )
@@ -147,7 +161,8 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json(
       {
         success: false,
-        error: '更新番茄钟失败'
+        error: '更新番茄钟失败',
+        details: error instanceof Error ? error.message : String(error)
       },
       { status: 500 }
     )
