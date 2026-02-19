@@ -4,19 +4,5 @@
   "installCommand": "npm install && prisma generate",
   "framework": "nextjs",
   "regions": ["sin1"],
-  "env": {
-    "DATABASE_URL": "@postgres_url",
-    "POSTGRES_URL": "@postgres_url",
-    "POSTGRES_URL_NON_POOLING": "@postgres_url_no_ssl",
-    "POSTGRES_PRISMA_URL": "@postgres_url"
-  },
-  "build": {
-    "env": {
-      "DATABASE_URL": "@postgres_url",
-      "POSTGRES_URL": "@postgres_url",
-      "POSTGRES_URL_NON_POOLING": "@postgres_url_no_ssl",
-      "POSTGRES_PRISMA_URL": "@postgres_url"
-    }
-  },
   "crons": []
 }
