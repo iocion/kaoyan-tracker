@@ -261,5 +261,5 @@ export interface StudyRecord {
 export interface StudyRecordCreateInput {
   subject: Subject
   duration: number
-  notes?: string
+  notes?: string | null
 }
