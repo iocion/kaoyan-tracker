@@ -106,10 +106,10 @@ async function addIndexes() {
       FROM pg_indexes
       WHERE schemaname = 'public'
         AND tablename IN ('Task', 'Pomodoro', 'DailyStat', 'StudyRecord')
-    `)
+    `) as { tablename: string; indexname: string }[]
 
     console.log(`\n✓ 共找到 ${indexes.length} 个索引:`)
-    indexes.forEach((idx: any) => {
+    indexes.forEach((idx) => {
       console.log(`  • ${idx.tablename}.${idx.indexname}`)
     })
 
