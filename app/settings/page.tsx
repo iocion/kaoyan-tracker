@@ -1,211 +1,172 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Moon, Sun, Bell, Clock, Database, Info, ChevronRight, Palette, Volume2 } from 'lucide-react'
-import { colors } from '@/lib/styles/colors'
+import { Moon } from 'lucide-react'
+
+interface Settings {
+  focusDuration: number
+  breakDuration: number
+  soundEnabled: boolean
+}
 
 /**
- * 设置页面 - iOS Settings 风格
+ * 设置页面 - 精简版
+ * 只保留已实现后端 API 的功能
  */
 export default function SettingsPage() {
+  const [settings, setSettings] = useState<Settings>({
+    focusDuration: 25,
+    breakDuration: 5,
+    soundEnabled: true
+  })
   const [darkMode, setDarkMode] = useState(false)
-  const [notifications, setNotifications] = useState(true)
-  const [soundEnabled, setSoundEnabled] = useState(true)
+  const [saving, setSaving] = useState(false)
 
+  // 加载设置
   useEffect(() => {
-    // 检查系统主题偏好
-    const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches
-    setDarkMode(isDark)
+    // 从后端加载设置
+    fetch('/api/settings')
+      .then(r => r.json())
+      .then(data => {
+        if (data.success && data.data) {
+          setSettings({
+            focusDuration: data.data.focusDuration || 25,
+            breakDuration: data.data.breakDuration || 5,
+            soundEnabled: data.data.soundEnabled !== false
+          })
+        }
+      })
+      .catch(() => {
+        // 使用默认设置
+      })
+
+    // 检查深色模式
+    if (typeof window !== 'undefined') {
+      setDarkMode(document.documentElement.classList.contains('dark'))
+    }
   }, [])
 
-  const toggleTheme = () => {
-    setDarkMode(!darkMode)
-    // 这里可以添加切换主题的逻辑
-    document.documentElement.classList.toggle('dark')
+  // 保存设置
+  const saveSettings = async () => {
+    setSaving(true)
+    try {
+      await fetch('/api/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(settings)
+      })
+    } catch (err) {
+      console.error('保存失败:', err)
+    } finally {
+      setSaving(false)
+    }
   }
 
-  const settings = [
-    {
-      section: '外观',
-      items: [
-        {
-          title: '深色模式',
-          description: '使用深色主题保护眼睛',
-          icon: Moon,
-          action: 'toggle',
-          value: darkMode,
-          onChange: toggleTheme,
-        },
-        {
-          title: '主题颜色',
-          description: '自定义应用主题',
-          icon: Palette,
-          action: 'link',
-          href: '/settings/theme',
-        },
-      ],
-    },
-    {
-      section: '通知',
-      items: [
-        {
-          title: '专注提醒',
-          description: '开始番茄钟时发送通知',
-          icon: Bell,
-          action: 'toggle',
-          value: notifications,
-          onChange: () => setNotifications(!notifications),
-        },
-        {
-          title: '提醒音效',
-          description: '播放提示音',
-          icon: Volume2,
-          action: 'toggle',
-          value: soundEnabled,
-          onChange: () => setSoundEnabled(!soundEnabled),
-        },
-      ],
-    },
-    {
-      section: '番茄钟',
-      items: [
-        {
-          title: '专注时长',
-          description: '25 分钟',
-          icon: Clock,
-          action: 'link',
-          href: '/settings/timer',
-        },
-        {
-          title: '短休息',
-          description: '5 分钟',
-          icon: Clock,
-          action: 'link',
-          href: '/settings/break',
-        },
-        {
-          title: '长休息',
-          description: '15 分钟',
-          icon: Clock,
-          action: 'link',
-          href: '/settings/long-break',
-        },
-      ],
-    },
-    {
-      section: '数据',
-      items: [
-        {
-          title: '导出数据',
-          description: '导出学习记录',
-          icon: Database,
-          action: 'link',
-          href: '/settings/export',
-        },
-        {
-          title: '清理缓存',
-          description: '释放存储空间',
-          icon: Database,
-          action: 'button',
-        },
-      ],
-    },
-    {
-      section: '关于',
-      items: [
-        {
-          title: '版本信息',
-          description: 'v2.0.0',
-          icon: Info,
-          action: 'link',
-          href: '/settings/about',
-        },
-      ],
-    },
-  ]
+  // 切换深色模式
+  const toggleDarkMode = () => {
+    const newMode = !darkMode
+    setDarkMode(newMode)
+    document.documentElement.classList.toggle('dark', newMode)
+    localStorage.setItem('darkMode', String(newMode))
+  }
 
   return (
-    <div className="max-w-2xl mx-auto">
-      {/* 页面标题 */}
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">设置</h1>
-        <p className="text-gray-500 dark:text-gray-400 mt-1">自定义你的应用</p>
+    <div className="max-w-2xl mx-auto p-4">
+      <h1 className="text-2xl font-bold mb-6">设置</h1>
+
+      {/* 外观设置 */}
+      <div className="bg-white rounded-xl p-4 mb-4 shadow-sm">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center">
+              <Moon className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="font-medium">深色模式</div>
+              <div className="text-sm text-gray-500">切换应用主题</div>
+            </div>
+          </div>
+          
+          <button
+            onClick={toggleDarkMode}
+            className={`w-12 h-7 rounded-full p-1 transition-colors ${
+              darkMode ? 'bg-[#60a5fa]' : 'bg-gray-300'
+            }`}
+          >
+            <div className={`w-5 h-5 rounded-full bg-white transition-transform ${
+              darkMode ? 'translate-x-5' : ''
+            }`} />
+          </button>
+        </div>
       </div>
 
-      {/* 设置列表 */}
-      {settings.map((section) => (
-        <div key={section.section} className="mb-6">
-          <h2 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3 px-1">
-            {section.section}
-          </h2>
+      {/* 番茄钟设置 */}
+      <div className="bg-white rounded-xl p-4 mb-4 shadow-sm">
+        <h2 className="font-medium mb-4">番茄钟时长</h2>
+        
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm text-gray-600 mb-2">专注时长: {settings.focusDuration} 分钟</label>
+            <input
+              type="range"
+              min="15"
+              max="60"
+              value={settings.focusDuration}
+              onChange={(e) => {
+                setSettings({ ...settings, focusDuration: parseInt(e.target.value) })
+              }}
+              onMouseUp={saveSettings}
+              className="w-full"
+            />
+          </div>
 
-          <div className="bg-white dark:bg-gray-900 rounded-2xl overflow-hidden shadow-sm">
-            {section.items.map((item, index) => (
-              <div
-                key={item.title}
-                className={`
-                  flex items-center justify-between px-4 py-4
-                  ${index !== section.items.length - 1 ? 'border-b border-gray-100 dark:border-gray-800' : ''}
-                  ${item.action === 'link' ? 'cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800' : ''}
-                  ${item.action === 'button' ? 'cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800' : ''}
-                  transition-colors
-                `}
-              >
-                {/* 左侧图标和文字 */}
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
-                    <item.icon className="w-5 h-5 text-gray-600 dark:text-gray-400" />
-                  </div>
-                  <div>
-                    <div className="text-sm font-medium text-gray-900 dark:text-white">
-                      {item.title}
-                    </div>
-                    {item.description && (
-                      <div className="text-xs text-gray-500 dark:text-gray-400">
-                        {item.description}
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* 右侧操作 */}
-                {item.action === 'toggle' && 'value' in item && 'onChange' in item && (
-                  <button
-                    onClick={item.onChange as () => void}
-                    className={`
-                      w-12 h-7 rounded-full p-1 transition-colors duration-200
-                      ${item.value ? 'bg-[#60a5fa]' : 'bg-gray-300 dark:bg-gray-700'}
-                    `}
-                  >
-                    <div
-                      className={`
-                        w-5 h-5 rounded-full bg-white shadow-sm transition-transform duration-200
-                        ${item.value ? 'translate-x-5' : 'translate-x-0'}
-                      `}
-                    />
-                  </button>
-                )}
-
-                {item.action === 'link' && (
-                  <ChevronRight className="w-5 h-5 text-gray-400" />
-                )}
-
-                {item.action === 'button' && (
-                  <span className="text-sm text-[#60a5fa] font-medium">
-                    点击清理
-                  </span>
-                )}
-              </div>
-            ))}
+          <div>
+            <label className="block text-sm text-gray-600 mb-2">休息时长: {settings.breakDuration} 分钟</label>
+            <input
+              type="range"
+              min="3"
+              max="15"
+              value={settings.breakDuration}
+              onChange={(e) => {
+                setSettings({ ...settings, breakDuration: parseInt(e.target.value) })
+              }}
+              onMouseUp={saveSettings}
+              className="w-full"
+            />
           </div>
         </div>
-      ))}
-
-      {/* 底部提示 */}
-      <div className="mt-8 text-center text-sm text-gray-500 dark:text-gray-400">
-        <p>考研番茄钟 v2.0.0</p>
-        <p className="mt-1">为考研学子打造的高效学习工具</p>
       </div>
+
+      {/* 声音设置 */}
+      <div className="bg-white rounded-xl p-4 shadow-sm">
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="font-medium">声音提醒</div>
+            <div className="text-sm text-gray-500">番茄钟结束时播放提示音</div>
+          </div>
+          
+          <button
+            onClick={() => {
+              const newValue = !settings.soundEnabled
+              setSettings({ ...settings, soundEnabled: newValue })
+              fetch('/api/settings', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ...settings, soundEnabled: newValue })
+              })
+            }}
+            className={`w-12 h-7 rounded-full p-1 transition-colors ${
+              settings.soundEnabled ? 'bg-[#60a5fa]' : 'bg-gray-300'
+            }`}
+          >
+            <div className={`w-5 h-5 rounded-full bg-white transition-transform ${
+              settings.soundEnabled ? 'translate-x-5' : ''
+            }`} />
+          </button>
+        </div>
+      </div>
+
+      {saving && <div className="text-center text-sm text-gray-500 mt-4">保存中...</div>}
     </div>
   )
 }
