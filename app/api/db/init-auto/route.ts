@@ -1,14 +1,13 @@
 import { NextResponse } from 'next/server'
-import { Subject } from '@prisma/client'
 
 export const dynamic = 'force-dynamic'
 
 /**
  * POST /api/db/init-auto
- * 自动初始化数据库表结构（使用原始 SQL）
+ * 自动初始化数据库表结构（完全使用原始 SQL，兼容 Neon）
  */
 export async function POST() {
-  const results: string[] = []
+  const logs: string[] = []
   
   try {
     // 检查环境变量
@@ -16,34 +15,66 @@ export async function POST() {
       return NextResponse.json({
         success: false,
         error: '数据库连接未配置',
-        details: '请在 Vercel 项目设置中添加 POSTGRES_PRISMA_URL'
+        details: '请在 Vercel 项目设置中添加 POSTGRES_PRISMA_URL 或 DATABASE_URL'
       }, { status: 500 })
     }
 
+    // 动态导入 prisma，避免构建时初始化
     const { prisma } = await import('@/lib/prisma')
     const userId = 'default'
 
-    results.push('开始数据库初始化...')
+    logs.push('开始数据库初始化...')
+    logs.push(`数据库 URL: ${process.env.POSTGRES_PRISMA_URL?.substring(0, 40)}...`)
 
-    // ========== 步骤 1: 创建所有表 ==========
+    // ========== 步骤 1: 测试数据库连接 ==========
     try {
-      results.push('创建 User 表...')
-      await prisma.$executeRawUnsafe(`
+      logs.push('测试数据库连接...')
+      await prisma.$queryRawUnsafe(`SELECT 1`)
+      logs.push('✓ 数据库连接成功')
+    } catch (error: any) {
+      logs.push(`✗ 数据库连接失败: ${error.message}`)
+      return NextResponse.json({
+        success: false,
+        error: '数据库连接失败',
+        details: error.message,
+        logs
+      }, { status: 500 })
+    }
+
+    // ========== 步骤 2: 创建所有表 ==========
+    const createTable = async (name: string, sql: string) => {
+      try {
+        logs.push(`创建 ${name} 表...`)
+        await prisma.$executeRawUnsafe(sql)
+        logs.push(`✓ ${name} 表创建成功`)
+        return true
+      } catch (error: any) {
+        // 表已存在不算错误
+        if (error.message?.includes('already exists') || error.code === '42P07') {
+          logs.push(`✓ ${name} 表已存在`)
+          return true
+        }
+        logs.push(`✗ ${name} 表创建失败: ${error.message}`)
+        throw error
+      }
+    }
+
+    try {
+      // User 表
+      await createTable('User', `
         CREATE TABLE IF NOT EXISTS "User" (
-          "id" TEXT NOT NULL,
+          "id" TEXT NOT NULL PRIMARY KEY,
           "name" TEXT NOT NULL DEFAULT '考研人',
           "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-          "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-          PRIMARY KEY ("id")
-        );
+          "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+        )
       `)
-      results.push('✓ User 表创建成功')
 
-      results.push('创建 UserSettings 表...')
-      await prisma.$executeRawUnsafe(`
+      // UserSettings 表
+      await createTable('UserSettings', `
         CREATE TABLE IF NOT EXISTS "UserSettings" (
-          "id" TEXT NOT NULL DEFAULT gen_random_uuid(),
-          "userId" TEXT NOT NULL,
+          "id" TEXT NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
+          "userId" TEXT NOT NULL UNIQUE,
           "focusDuration" INTEGER NOT NULL DEFAULT 25,
           "breakDuration" INTEGER NOT NULL DEFAULT 5,
           "longBreakDuration" INTEGER NOT NULL DEFAULT 15,
@@ -51,17 +82,14 @@ export async function POST() {
           "autoStartBreak" BOOLEAN NOT NULL DEFAULT false,
           "autoStartFocus" BOOLEAN NOT NULL DEFAULT false,
           "soundEnabled" BOOLEAN NOT NULL DEFAULT true,
-          "vibrationEnabled" BOOLEAN NOT NULL DEFAULT true,
-          PRIMARY KEY ("id"),
-          UNIQUE ("userId")
-        );
+          "vibrationEnabled" BOOLEAN NOT NULL DEFAULT true
+        )
       `)
-      results.push('✓ UserSettings 表创建成功')
 
-      results.push('创建 Task 表...')
-      await prisma.$executeRawUnsafe(`
+      // Task 表
+      await createTable('Task', `
         CREATE TABLE IF NOT EXISTS "Task" (
-          "id" TEXT NOT NULL DEFAULT gen_random_uuid(),
+          "id" TEXT NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
           "userId" TEXT NOT NULL,
           "title" VARCHAR(200) NOT NULL,
           "subject" TEXT NOT NULL,
@@ -70,16 +98,14 @@ export async function POST() {
           "isCompleted" BOOLEAN NOT NULL DEFAULT false,
           "isActive" BOOLEAN NOT NULL DEFAULT false,
           "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-          "completedAt" TIMESTAMP(3),
-          PRIMARY KEY ("id")
-        );
+          "completedAt" TIMESTAMP(3)
+        )
       `)
-      results.push('✓ Task 表创建成功')
 
-      results.push('创建 Pomodoro 表...')
-      await prisma.$executeRawUnsafe(`
+      // Pomodoro 表
+      await createTable('Pomodoro', `
         CREATE TABLE IF NOT EXISTS "Pomodoro" (
-          "id" TEXT NOT NULL DEFAULT gen_random_uuid(),
+          "id" TEXT NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
           "userId" TEXT NOT NULL,
           "taskId" TEXT,
           "type" TEXT NOT NULL,
@@ -89,16 +115,14 @@ export async function POST() {
           "startedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
           "endedAt" TIMESTAMP(3),
           "pauseCount" INTEGER NOT NULL DEFAULT 0,
-          "totalPausedTime" INTEGER NOT NULL DEFAULT 0,
-          PRIMARY KEY ("id")
-        );
+          "totalPausedTime" INTEGER NOT NULL DEFAULT 0
+        )
       `)
-      results.push('✓ Pomodoro 表创建成功')
 
-      results.push('创建 DailyStat 表...')
-      await prisma.$executeRawUnsafe(`
+      // DailyStat 表
+      await createTable('DailyStat', `
         CREATE TABLE IF NOT EXISTS "DailyStat" (
-          "id" TEXT NOT NULL DEFAULT gen_random_uuid(),
+          "id" TEXT NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
           "userId" TEXT NOT NULL,
           "date" DATE NOT NULL,
           "totalPomodoros" INTEGER NOT NULL DEFAULT 0,
@@ -111,130 +135,126 @@ export async function POST() {
           "completedTasks" INTEGER NOT NULL DEFAULT 0,
           "createdTasks" INTEGER NOT NULL DEFAULT 0,
           "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-          PRIMARY KEY ("id"),
           UNIQUE ("userId", "date")
-        );
+        )
       `)
-      results.push('✓ DailyStat 表创建成功')
 
-      results.push('创建 StudyRecord 表...')
-      await prisma.$executeRawUnsafe(`
+      // StudyRecord 表
+      await createTable('StudyRecord', `
         CREATE TABLE IF NOT EXISTS "StudyRecord" (
-          "id" TEXT NOT NULL DEFAULT gen_random_uuid(),
+          "id" TEXT NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
           "userId" TEXT NOT NULL,
           "subject" TEXT NOT NULL,
           "duration" DOUBLE PRECISION NOT NULL,
           "notes" TEXT,
-          "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-          PRIMARY KEY ("id")
-        );
+          "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+        )
       `)
-      results.push('✓ StudyRecord 表创建成功')
+
+      logs.push('✓ 所有表创建完成')
 
     } catch (error: any) {
-      results.push(`✗ 创建表失败: ${error.message}`)
       return NextResponse.json({
         success: false,
         error: '创建表失败',
         details: error.message,
-        logs: results
+        logs
       }, { status: 500 })
     }
 
-    // ========== 步骤 2: 验证表是否存在 ==========
+    // ========== 步骤 3: 验证表是否存在 ==========
     try {
-      results.push('验证表是否存在...')
-      const tableCheck = await prisma.$queryRaw`
+      logs.push('验证表是否存在...')
+      const tableCheck = await prisma.$queryRawUnsafe(`
         SELECT table_name 
         FROM information_schema.tables 
         WHERE table_schema = 'public' 
         AND table_name IN ('User', 'UserSettings', 'Task', 'Pomodoro', 'DailyStat', 'StudyRecord')
-      `
+      `)
+      
       const existingTables = (tableCheck as any[]).map(t => t.table_name)
-      results.push(`已存在的表: ${existingTables.join(', ')}`)
+      logs.push(`已验证的表: ${existingTables.join(', ')} (${existingTables.length}/6)`)
       
       if (existingTables.length < 6) {
         const missing = ['User', 'UserSettings', 'Task', 'Pomodoro', 'DailyStat', 'StudyRecord']
           .filter(t => !existingTables.includes(t))
-        results.push(`✗ 缺少表: ${missing.join(', ')}`)
-        return NextResponse.json({
-          success: false,
-          error: '部分表未创建成功',
-          details: `缺少表: ${missing.join(', ')}`,
-          logs: results
-        }, { status: 500 })
+        logs.push(`✗ 缺少表: ${missing.join(', ')}`)
       }
     } catch (error: any) {
-      results.push(`✗ 验证表失败: ${error.message}`)
+      logs.push(`⚠ 验证表时出错: ${error.message}`)
     }
 
-    // ========== 步骤 3: 使用原始 SQL 插入数据 ==========
+    // ========== 步骤 4: 插入默认数据（使用纯 SQL） ==========
+    
+    // 插入用户
     try {
-      results.push('插入默认用户...')
+      logs.push('插入默认用户...')
       
-      // 检查用户是否已存在
-      const existingUser = await prisma.$queryRaw`
-        SELECT "id" FROM "User" WHERE "id" = ${userId}
-      `
+      const userCheck = await prisma.$queryRawUnsafe(`
+        SELECT "id" FROM "User" WHERE "id" = '${userId}'
+      `)
       
-      if ((existingUser as any[]).length === 0) {
-        await prisma.$executeRaw`
+      if ((userCheck as any[]).length === 0) {
+        await prisma.$executeRawUnsafe(`
           INSERT INTO "User" ("id", "name", "createdAt", "updatedAt")
-          VALUES (${userId}, '考研人', NOW(), NOW())
-        `
-        results.push('✓ 用户创建成功')
+          VALUES ('${userId}', '考研人', NOW(), NOW())
+        `)
+        logs.push('✓ 用户创建成功')
       } else {
-        results.push('✓ 用户已存在')
+        logs.push('✓ 用户已存在')
       }
-
     } catch (error: any) {
-      results.push(`✗ 创建用户失败: ${error.message}`)
+      logs.push(`✗ 创建用户失败: ${error.message}`)
       return NextResponse.json({
         success: false,
         error: '创建用户失败',
         details: error.message,
-        logs: results
+        logs
       }, { status: 500 })
     }
 
+    // 插入设置
     try {
-      results.push('插入默认设置...')
+      logs.push('插入默认设置...')
       
-      // 检查设置是否已存在
-      const existingSettings = await prisma.$queryRaw`
-        SELECT "id" FROM "UserSettings" WHERE "userId" = ${userId}
-      `
+      const settingsCheck = await prisma.$queryRawUnsafe(`
+        SELECT "id" FROM "UserSettings" WHERE "userId" = '${userId}'
+      `)
       
-      if ((existingSettings as any[]).length === 0) {
-        await prisma.$executeRaw`
-          INSERT INTO "UserSettings" ("userId", "focusDuration", "breakDuration", "longBreakDuration", 
-            "pomodorosUntilLongBreak", "autoStartBreak", "autoStartFocus", "soundEnabled", "vibrationEnabled")
-          VALUES (${userId}, 25, 5, 15, 4, false, false, true, true)
-        `
-        results.push('✓ 用户设置创建成功')
+      if ((settingsCheck as any[]).length === 0) {
+        await prisma.$executeRawUnsafe(`
+          INSERT INTO "UserSettings" 
+          ("userId", "focusDuration", "breakDuration", "longBreakDuration", 
+           "pomodorosUntilLongBreak", "autoStartBreak", "autoStartFocus", 
+           "soundEnabled", "vibrationEnabled")
+          VALUES 
+          ('${userId}', 25, 5, 15, 4, false, false, true, true)
+        `)
+        logs.push('✓ 用户设置创建成功')
       } else {
-        results.push('✓ 用户设置已存在')
+        logs.push('✓ 用户设置已存在')
       }
-
     } catch (error: any) {
-      results.push(`✗ 创建设置失败: ${error.message}`)
+      logs.push(`✗ 创建设置失败: ${error.message}`)
       return NextResponse.json({
         success: false,
         error: '创建设置失败',
         details: error.message,
-        logs: results
+        logs
       }, { status: 500 })
     }
 
+    // 插入示例任务
     try {
-      results.push('插入示例任务...')
+      logs.push('插入示例任务...')
       
-      // 检查是否已有任务
-      const existingTasks = await prisma.$queryRaw`
-        SELECT COUNT(*) as count FROM "Task" WHERE "userId" = ${userId}
-      `
+      const taskCheck = await prisma.$queryRawUnsafe(`
+        SELECT COUNT(*) as count FROM "Task" WHERE "userId" = '${userId}'
+      `)
       
-      if ((existingTasks as any[])[0].count === 0) {
+      const taskCount = parseInt((taskCheck as any[])[0]?.count || '0')
+      
+      if (taskCount === 0) {
         const sampleTasks = [
           { title: '数据结构 - 复习二叉树', subject: 'COMPUTER_408', pomodoros: 2 },
           { title: '高数 - 微积分练习', subject: 'MATH', pomodoros: 3 },
@@ -243,37 +263,40 @@ export async function POST() {
         ]
 
         for (const task of sampleTasks) {
-          await prisma.$executeRaw`
-            INSERT INTO "Task" ("userId", "title", "subject", "estimatedPomodoros", "isCompleted", "isActive", "createdAt")
-            VALUES (${userId}, ${task.title}, ${task.subject}, ${task.pomodoros}, false, false, NOW())
-          `
+          // 转义单引号
+          const safeTitle = task.title.replace(/'/g, "''")
+          await prisma.$executeRawUnsafe(`
+            INSERT INTO "Task" 
+            ("userId", "title", "subject", "estimatedPomodoros", "isCompleted", "isActive", "createdAt")
+            VALUES 
+            ('${userId}', '${safeTitle}', '${task.subject}', ${task.pomodoros}, false, false, NOW())
+          `)
         }
-        results.push(`✓ 创建了 ${sampleTasks.length} 个示例任务`)
+        logs.push(`✓ 创建了 ${sampleTasks.length} 个示例任务`)
       } else {
-        results.push('✓ 示例任务已存在')
+        logs.push(`✓ 已有 ${taskCount} 个任务，跳过创建`)
       }
-
     } catch (error: any) {
-      results.push(`✗ 创建任务失败: ${error.message}`)
-      // 不返回错误，任务创建失败不影响整体初始化
+      logs.push(`⚠ 创建任务失败: ${error.message}`)
+      // 任务创建失败不影响整体成功
     }
 
-    results.push('数据库初始化完成！')
+    logs.push('数据库初始化完成！')
     
     return NextResponse.json({
       success: true,
       message: '数据库初始化成功',
-      logs: results,
+      logs,
       timestamp: new Date().toISOString()
     })
 
   } catch (error: any) {
-    results.push(`✗ 初始化失败: ${error.message}`)
+    logs.push(`✗ 初始化失败: ${error.message}`)
     return NextResponse.json({
       success: false,
       error: '数据库初始化失败',
       details: error.message,
-      logs: results
+      logs
     }, { status: 500 })
   }
 }
@@ -283,37 +306,53 @@ export async function POST() {
  * 检查数据库初始化状态
  */
 export async function GET() {
+  const logs: string[] = []
+  
   try {
     const { prisma } = await import('@/lib/prisma')
 
     // 检查表是否存在
-    const tables = await prisma.$queryRaw`
+    logs.push('检查表状态...')
+    const tables = await prisma.$queryRawUnsafe(`
       SELECT table_name 
       FROM information_schema.tables 
       WHERE table_schema = 'public' 
       AND table_name IN ('User', 'UserSettings', 'Task', 'Pomodoro', 'DailyStat', 'StudyRecord')
-    `
+    `)
 
     const tableNames = (tables as any[]).map(t => t.table_name)
+    logs.push(`找到 ${tableNames.length} 个表: ${tableNames.join(', ') || '无'}`)
     
     // 检查数据
     let userCount = 0
     let taskCount = 0
     
     if (tableNames.includes('User')) {
-      const userResult = await prisma.$queryRaw`SELECT COUNT(*) as count FROM "User"`
-      userCount = (userResult as any[])[0]?.count || 0
+      try {
+        const userResult = await prisma.$queryRawUnsafe(`SELECT COUNT(*) as count FROM "User"`)
+        userCount = parseInt((userResult as any[])[0]?.count || '0')
+        logs.push(`用户数量: ${userCount}`)
+      } catch (e: any) {
+        logs.push(`查询用户失败: ${e.message}`)
+      }
     }
     
     if (tableNames.includes('Task')) {
-      const taskResult = await prisma.$queryRaw`SELECT COUNT(*) as count FROM "Task"`
-      taskCount = (taskResult as any[])[0]?.count || 0
+      try {
+        const taskResult = await prisma.$queryRawUnsafe(`SELECT COUNT(*) as count FROM "Task"`)
+        taskCount = parseInt((taskResult as any[])[0]?.count || '0')
+        logs.push(`任务数量: ${taskCount}`)
+      } catch (e: any) {
+        logs.push(`查询任务失败: ${e.message}`)
+      }
     }
+
+    const initialized = tableNames.length >= 6 && userCount > 0
 
     return NextResponse.json({
       success: true,
       data: {
-        initialized: tableNames.length >= 6 && userCount > 0,
+        initialized,
         tables: {
           total: 6,
           created: tableNames.length,
@@ -323,13 +362,16 @@ export async function GET() {
           users: userCount,
           tasks: taskCount
         }
-      }
+      },
+      logs
     })
   } catch (error: any) {
+    logs.push(`检查失败: ${error.message}`)
     return NextResponse.json({
       success: false,
       error: '检查数据库状态失败',
-      details: error.message
+      details: error.message,
+      logs
     }, { status: 500 })
   }
 }
