@@ -17,11 +17,12 @@ export async function GET() {
       }, { status: 500 })
     }
 
-    const prisma = await import('@/lib/prisma')
+    const { prisma } = await import('@/lib/prisma')
 
     // 测试数据库连接
     try {
-      await prisma.$connect()
+      // 简单查询测试连接
+      await prisma.$queryRaw`SELECT 1`
     } catch (error) {
       return NextResponse.json({
         success: false,
