@@ -247,26 +247,28 @@ export class TaskService {
         })
       ])
 
-      // 按学科统计 - 使用 GROUP BY
-      const tasks = await prisma.task.groupBy({
-        by: ['subject'],
-        where: {
-          userId: DEFAULT_USER_ID
-        }
-      })
+      // 按学科统计 - 使用并行 count 查询
+      const [count408, countMath, countEnglish, countPolitics] = await Promise.all([
+        prisma.task.count({
+          where: { userId: DEFAULT_USER_ID, subject: Subject.COMPUTER_408 }
+        }),
+        prisma.task.count({
+          where: { userId: DEFAULT_USER_ID, subject: Subject.MATH }
+        }),
+        prisma.task.count({
+          where: { userId: DEFAULT_USER_ID, subject: Subject.ENGLISH }
+        }),
+        prisma.task.count({
+          where: { userId: DEFAULT_USER_ID, subject: Subject.POLITICS }
+        })
+      ])
 
       const bySubject = {
-        [Subject.COMPUTER_408]: 0,
-        [Subject.MATH]: 0,
-        [Subject.ENGLISH]: 0,
-        [Subject.POLITICS]: 0
+        [Subject.COMPUTER_408]: count408,
+        [Subject.MATH]: countMath,
+        [Subject.ENGLISH]: countEnglish,
+        [Subject.POLITICS]: countPolitics
       }
-
-      tasks.forEach(task => {
-        if (bySubject.hasOwnProperty(task.subject)) {
-          bySubject[task.subject] = task._count.id
-        }
-      })
 
       return { total, completed, inProgress, bySubject }
     } catch (error) {
