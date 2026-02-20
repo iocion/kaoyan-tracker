@@ -23,7 +23,7 @@ export default function TimerPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   
-  const { showSuccess, showError } = useToast()
+  const { showSuccess, showError, showInfo } = useToast()
 
   const totalTime = 25 * 60
 
