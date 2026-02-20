@@ -50,8 +50,10 @@ model Task {
 
   pomodoros   Pomodoro[]
 
-  @@index([userId, isCompleted])
-  @@index([userId, isActive])
+  @@index([userId, isCompleted]) // 用于查询已完成/未完成的任务
+  @@index([userId, isActive])    // 用于查询当前活跃任务
+  @@index([userId, createdAt])   // 用于按时间排序
+  @@index([userId, subject])     // 按学科筛选
 }
 
 model Pomodoro {
@@ -60,22 +62,23 @@ model Pomodoro {
   user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   taskId      String?
   task        Task?     @relation(fields: [taskId], references: [id], onDelete: SetNull)
-  
+
   type        PomodoroType // FOCUS, BREAK, LONG_BREAK
   status      PomodoroStatus // RUNNING, PAUSED, COMPLETED, CANCELLED
-  
+
   duration    Int       // 计划时长（秒）
   elapsedTime Int       @default(0) // 已用时间（秒）
-  
+
   startedAt   DateTime  @default(now())
   endedAt     DateTime?
-  
+
   // 暂停记录
   pauseCount  Int       @default(0)
   totalPausedTime Int   @default(0) // 总共暂停的时间（秒）
 
-  @@index([userId, status])
-  @@index([userId, startedAt])
+  @@index([userId, status])        // 查询当前活跃/暂停的番茄钟
+  @@index([userId, startedAt])     // 查询历史记录
+  @@index([taskId, status])        // 任务相关的番茄钟查询
 }
 
 model DailyStat {
@@ -102,6 +105,9 @@ model DailyStat {
   createdAt       DateTime @default(now())
 
   @@unique([userId, date])
+  @@index([userId])              // 查询用户所有记录
+  @@index([userId, date])       // 查询用户某天记录
+  @@index([date])               // 查询所有天的统计（用于趋势分析）
 }
 
 model StudyRecord {
@@ -113,7 +119,8 @@ model StudyRecord {
   notes     String?
   createdAt DateTime @default(now())
 
-  @@index([userId, createdAt])
+  @@index([userId, createdAt])   // 查询用户历史记录
+  @@index([subject])             // 按学科统计
 }
 
 enum Subject {

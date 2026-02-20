@@ -6,22 +6,12 @@ import { DEFAULT_USER_ID } from '@/lib/constants'
 export class TaskService {
 
   /**
-   * 获取所有任务
+   * 获取所有任务（优化版 - 避免 N+1 查询）
    */
   static async getAll(): Promise<Task[]> {
     try {
       const tasks = await prisma.task.findMany({
         where: { userId: DEFAULT_USER_ID },
-        include: {
-          pomodoros: {
-            where: {
-              status: 'COMPLETED'
-            },
-            select: {
-              id: true
-            }
-          }
-        },
         orderBy: [
           { isActive: 'desc' },
           { isCompleted: 'asc' },
@@ -29,7 +19,30 @@ export class TaskService {
         ]
       })
 
-      return tasks as Task[]
+      // 使用批量查询获取所有任务的 completed pomodoros
+      const taskIds = tasks.map(t => t.id)
+      const completedPomodoros = await prisma.pomodoro.findMany({
+        where: {
+          taskId: { in: taskIds },
+          status: 'COMPLETED'
+        },
+        select: {
+          taskId: true,
+          id: true
+        }
+      })
+
+      // 构建任务列表，包含完成次数
+      return tasks.map(task => {
+        const taskCompletedCount = completedPomodoros.filter(
+          p => p.taskId === task.id
+        ).length
+
+        return {
+          ...task,
+          completedPomodoros: taskCompletedCount
+        }
+      }) as Task[]
     } catch (error) {
       console.error('[TaskService] Get all error:', error)
       throw new Error('获取任务列表失败')
@@ -37,18 +50,29 @@ export class TaskService {
   }
 
   /**
-   * 根据 ID 获取任务
+   * 根据 ID 获取任务（优化版）
    */
   static async getById(id: string): Promise<Task | null> {
     try {
+      // 获取任务基本信息
       const task = await prisma.task.findUnique({
-        where: { id },
-        include: {
-          pomodoros: true
+        where: { id }
+      })
+
+      if (!task) return null
+
+      // 使用数据库聚合计算完成次数
+      const pomodoroCount = await prisma.pomodoro.count({
+        where: {
+          taskId: id,
+          status: 'COMPLETED'
         }
       })
 
-      return task as Task | null
+      return {
+        ...task,
+        completedPomodoros: pomodoroCount
+      } as Task
     } catch (error) {
       console.error('[TaskService] Get by id error:', error)
       throw new Error('获取任务失败')
@@ -56,28 +80,35 @@ export class TaskService {
   }
 
   /**
-   * 获取当前活跃的任务
+   * 获取当前活跃的任务（优化版）
    */
   static async getActive(): Promise<Task | null> {
     try {
+      // 首先尝试从缓存或直接查询获取活跃任务
       const task = await prisma.task.findFirst({
         where: {
           userId: DEFAULT_USER_ID,
           isActive: true
         },
-        include: {
-          pomodoros: {
-            where: {
-              status: 'COMPLETED'
-            },
-            select: {
-              id: true
-            }
-          }
+        orderBy: {
+          createdAt: 'desc'
         }
       })
 
-      return task as Task | null
+      if (!task) return null
+
+      // 使用数据库聚合计算完成次数
+      const pomodoroCount = await prisma.pomodoro.count({
+        where: {
+          taskId: task.id,
+          status: 'COMPLETED'
+        }
+      })
+
+      return {
+        ...task,
+        completedPomodoros: pomodoroCount
+      } as Task
     } catch (error) {
       console.error('[TaskService] Get active error:', error)
       throw new Error('获取当前任务失败')
@@ -188,7 +219,7 @@ export class TaskService {
   }
 
   /**
-   * 获取任务统计
+   * 获取任务统计（优化版）
    */
   static async getStats(): Promise<{
     total: number
@@ -197,20 +228,45 @@ export class TaskService {
     bySubject: Record<Subject, number>
   }> {
     try {
-      const tasks = await prisma.task.findMany({
-        where: { userId: DEFAULT_USER_ID }
+      // 使用数据库聚合查询
+      const [total, completed, inProgress] = await Promise.all([
+        prisma.task.count({
+          where: { userId: DEFAULT_USER_ID }
+        }),
+        prisma.task.count({
+          where: {
+            userId: DEFAULT_USER_ID,
+            isCompleted: true
+          }
+        }),
+        prisma.task.count({
+          where: {
+            userId: DEFAULT_USER_ID,
+            isCompleted: false
+          }
+        })
+      ])
+
+      // 按学科统计 - 使用 GROUP BY
+      const tasks = await prisma.task.groupBy({
+        by: ['subject'],
+        where: {
+          userId: DEFAULT_USER_ID
+        }
       })
 
-      const total = tasks.length
-      const completed = tasks.filter(t => t.isCompleted).length
-      const inProgress = tasks.filter(t => !t.isCompleted).length
-
       const bySubject = {
-        [Subject.COMPUTER_408]: tasks.filter(t => t.subject === Subject.COMPUTER_408).length,
-        [Subject.MATH]: tasks.filter(t => t.subject === Subject.MATH).length,
-        [Subject.ENGLISH]: tasks.filter(t => t.subject === Subject.ENGLISH).length,
-        [Subject.POLITICS]: tasks.filter(t => t.subject === Subject.POLITICS).length
+        [Subject.COMPUTER_408]: 0,
+        [Subject.MATH]: 0,
+        [Subject.ENGLISH]: 0,
+        [Subject.POLITICS]: 0
       }
+
+      tasks.forEach(task => {
+        if (bySubject.hasOwnProperty(task.subject)) {
+          bySubject[task.subject] = task._count.id
+        }
+      })
 
       return { total, completed, inProgress, bySubject }
     } catch (error) {
@@ -263,6 +319,55 @@ export class TaskService {
     } catch (error) {
       console.error('[TaskService] Get incomplete error:', error)
       throw new Error('获取未完成任务失败')
+    }
+  }
+
+  /**
+   * 获取所有任务的完成进度（按 Pomodoro 数量）
+   */
+  static async getProgress(): Promise<{
+    task: Task
+    progress: number // 0-100
+  }[]> {
+    try {
+      const tasks = await prisma.task.findMany({
+        where: {
+          userId: DEFAULT_USER_ID,
+          isCompleted: false
+        },
+        orderBy: { createdAt: 'desc' }
+      })
+
+      const completedPomodoros = await prisma.pomodoro.findMany({
+        where: {
+          taskId: { in: tasks.map(t => t.id) },
+          status: 'COMPLETED'
+        },
+        select: {
+          taskId: true,
+          id: true
+        }
+      })
+
+      return tasks.map(task => {
+        const count = completedPomodoros.filter(
+          p => p.taskId === task.id
+        ).length
+
+        // 计算进度百分比（最多 100%，不考虑 estimatedPomodoros）
+        const progress = Math.min(
+          Math.round((count / Math.max(task.estimatedPomodoros || 1, 1)) * 100),
+          100
+        )
+
+        return {
+          task,
+          progress
+        }
+      })
+    } catch (error) {
+      console.error('[TaskService] Get progress error:', error)
+      throw new Error('获取任务进度失败')
     }
   }
 }

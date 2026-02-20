@@ -1,0 +1,10 @@
+{
+  "session_id": "1771601336-375195",
+  "start_time": "2026-02-20T23:28:56+08:00",
+  "agent_id": "default",
+  "task_name": "未命名任务",
+  "workspace": "/home/iocion/.openclaw/workspace/kaoyan-tracker",
+  "git_branch": "main",
+  "git_commit": "6adda22",
+  "status": "running"
+}

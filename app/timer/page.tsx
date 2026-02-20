@@ -1,8 +1,10 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Play, Pause, RotateCcw } from 'lucide-react'
 import { colors } from '@/lib/styles/colors'
+import { LoadingSpinner, ErrorMessage } from '@/components/ui'
+import { useToast } from '@/components/ui/Toast'
 
 interface Task {
   id: string
@@ -10,8 +12,7 @@ interface Task {
 }
 
 /**
- * 番茄钟页面 - 精简版
- * 只保留已实现后端 API 的功能
+ * 番茄钟页面 - 优化版
  */
 export default function TimerPage() {
   const [timeLeft, setTimeLeft] = useState(25 * 60)
@@ -19,21 +20,39 @@ export default function TimerPage() {
   const [currentTask, setCurrentTask] = useState<Task | null>(null)
   const [tasks, setTasks] = useState<Task[]>([])
   const [sessionActive, setSessionActive] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  
+  const { showSuccess, showError } = useToast()
 
   const totalTime = 25 * 60
 
   // 加载活跃任务
-  useEffect(() => {
-    fetch('/api/tasks')
-      .then(r => r.json())
-      .then(data => {
-        if (data.success) {
-          const active = data.data?.find((t: any) => t.isActive)
-          if (active) setCurrentTask(active)
-          setTasks(data.data?.filter((t: any) => !t.isCompleted) || [])
-        }
-      })
+  const fetchTasks = useCallback(async () => {
+    try {
+      setLoading(true)
+      const res = await fetch('/api/tasks')
+      const data = await res.json()
+      
+      if (data.success) {
+        const active = data.data?.find((t: any) => t.isActive)
+        if (active) setCurrentTask(active)
+        setTasks(data.data?.filter((t: any) => !t.isCompleted) || [])
+      } else {
+        throw new Error(data.error || '加载任务失败')
+      }
+      setError(null)
+    } catch (err) {
+      console.error('加载任务失败:', err)
+      setError('无法加载任务列表')
+    } finally {
+      setLoading(false)
+    }
   }, [])
+
+  useEffect(() => {
+    fetchTasks()
+  }, [fetchTasks])
 
   // 计时器逻辑
   useEffect(() => {
@@ -61,7 +80,7 @@ export default function TimerPage() {
 
   const startSession = async () => {
     try {
-      await fetch('/api/pomodoro', {
+      const res = await fetch('/api/pomodoro', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -70,10 +89,15 @@ export default function TimerPage() {
           taskId: currentTask?.id || null
         })
       })
+      
+      if (!res.ok) throw new Error('开始番茄钟失败')
+      
       setSessionActive(true)
       setIsRunning(true)
+      showSuccess('番茄钟开始！保持专注 💪')
     } catch (err) {
       console.error('开始失败:', err)
+      showError('开始番茄钟失败，请重试')
     }
   }
 
@@ -84,16 +108,22 @@ export default function TimerPage() {
     }
 
     const action = isRunning ? 'pause' : 'resume'
+    const message = isRunning ? '番茄钟已暂停' : '番茄钟继续'
     
     try {
-      await fetch('/api/pomodoro', {
+      const res = await fetch('/api/pomodoro', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action })
       })
+      
+      if (!res.ok) throw new Error('操作失败')
+      
       setIsRunning(!isRunning)
+      showSuccess(message)
     } catch (err) {
       console.error('切换失败:', err)
+      showError('操作失败，请重试')
     }
   }
 
@@ -117,8 +147,11 @@ export default function TimerPage() {
       }
       
       setSessionActive(false)
+      showSuccess('🎉 番茄钟完成！休息一下')
+      setTimeLeft(totalTime)
     } catch (err) {
       console.error('完成失败:', err)
+      showError('保存记录失败')
     }
   }
 
@@ -126,9 +159,18 @@ export default function TimerPage() {
     setIsRunning(false)
     setTimeLeft(totalTime)
     setSessionActive(false)
+    showInfo('已重置')
   }
 
   const progress = ((totalTime - timeLeft) / totalTime) * 100
+
+  if (loading) {
+    return <LoadingSpinner text="加载中..." />
+  }
+
+  if (error) {
+    return <ErrorMessage message={error} onRetry={fetchTasks} />
+  }
 
   return (
     <div className="max-w-2xl mx-auto p-4">
@@ -171,15 +213,15 @@ export default function TimerPage() {
       <div className="flex justify-center gap-4 mb-8">
         <button
           onClick={resetTimer}
-          className="w-14 h-14 rounded-full bg-gray-200 flex items-center justify-center hover:bg-gray-300"
+          className="w-14 h-14 rounded-full bg-gray-200 flex items-center justify-center hover:bg-gray-300 transition-colors"
         >
           <RotateCcw className="w-6 h-6" />
         </button>
 
         <button
           onClick={toggleTimer}
-          className={`w-16 h-16 rounded-full flex items-center justify-center text-white transition-colors ${
-            isRunning ? 'bg-amber-500 hover:bg-amber-600' : 'bg-[#60a5fa] hover:bg-[#3b82f6]'
+          className={`w-16 h-16 rounded-full flex items-center justify-center text-white transition-colors shadow-lg ${
+            isRunning ? 'bg-amber-500 hover:bg-amber-600' : 'bg-primary-500 hover:bg-primary-600'
           }`}
         >
           {isRunning ? <Pause className="w-7 h-7" /> : <Play className="w-7 h-7 ml-1" />}
@@ -188,12 +230,12 @@ export default function TimerPage() {
 
       {/* 当前任务 */}
       {currentTask ? (
-        <div className="bg-white rounded-xl p-4 shadow-sm">
+        <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
           <div className="text-sm text-gray-500 mb-1">当前任务</div>
           <div className="font-medium">{currentTask.title}</div>
         </div>
       ) : (
-        <div className="bg-gray-100 rounded-xl p-4 text-center text-gray-500">
+        <div className="bg-gray-50 rounded-xl p-4 text-center text-gray-500 border border-gray-100">
           在任务列表中选择一个任务开始专注
         </div>
       )}
