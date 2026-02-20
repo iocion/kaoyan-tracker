@@ -1,10 +1,19 @@
 import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
-import { Subject } from '@prisma/client'
 
 export const dynamic = 'force-dynamic'
 
 export async function POST() {
+  // 构建时跳过，避免直接实例化 PrismaClient
+  if (!process.env.POSTGRES_URL && !process.env.DATABASE_URL) {
+    return NextResponse.json({
+      success: false,
+      error: 'Database connection not configured. Set POSTGRES_URL or DATABASE_URL.'
+    }, { status: 500 })
+  }
+
+  const { prisma } = await import('@/lib/prisma')
+  const { Subject } = await import('@prisma/client')
+
   try {
     const userId = 'default'
 

@@ -11,10 +11,6 @@ import {
 
 export const dynamic = 'force-dynamic'
 
-/**
- * GET /api/pomodoro
- * 获取当前正在进行的番茄钟
- */
 export async function GET() {
   try {
     const activePomodoro = await PomodoroService.getActive()
@@ -36,23 +32,11 @@ export async function GET() {
   }
 }
 
-/**
- * POST /api/pomodoro
- * 开始新的番茄钟
- */
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
-
-    console.log('[API] POST /api/pomodoro body:', body)
-
-    // 验证输入
     const validated = pomodoroCreateSchema.parse(body)
-    console.log('[API] Validated input:', validated)
-
-    // 开始番茄钟
     const pomodoro = await PomodoroService.start(validated)
-    console.log('[API] Created pomodoro:', pomodoro)
 
     return NextResponse.json(
       {
@@ -64,7 +48,6 @@ export async function POST(req: NextRequest) {
   } catch (error: any) {
     console.error('[API] Start pomodoro error:', error)
 
-    // Zod 验证错误
     if (error.name === 'ZodError') {
       return NextResponse.json(
         {
@@ -87,41 +70,30 @@ export async function POST(req: NextRequest) {
   }
 }
 
-/**
- * PATCH /api/pomodoro
- * 更新番茄钟状态
- */
 export async function PATCH(req: NextRequest) {
   try {
     const body = await req.json()
     const { action } = body
 
-    console.log('[API] PATCH /api/pomodoro action:', action, 'body:', body)
-
-    // 根据不同的操作进行验证和处理
     switch (action) {
       case 'pause':
         await pomodoroPauseSchema.parseAsync(body)
         const paused = await PomodoroService.pause(body.id)
-        console.log('[API] Paused pomodoro:', paused)
         return NextResponse.json({ success: true, data: paused })
 
       case 'resume':
         await pomodoroResumeSchema.parseAsync(body)
         const resumed = await PomodoroService.resume(body.id)
-        console.log('[API] Resumed pomodoro:', resumed)
         return NextResponse.json({ success: true, data: resumed })
 
       case 'complete':
         await pomodoroCompleteSchema.parseAsync(body)
         const completed = await PomodoroService.complete(body.id)
-        console.log('[API] Completed pomodoro:', completed)
         return NextResponse.json({ success: true, data: completed })
 
       case 'cancel':
         await pomodoroCancelSchema.parseAsync(body)
         const cancelled = await PomodoroService.cancel(body.id)
-        console.log('[API] Cancelled pomodoro:', cancelled)
         return NextResponse.json({ success: true, data: cancelled })
 
       case 'update':
@@ -130,7 +102,6 @@ export async function PATCH(req: NextRequest) {
           status: body.status,
           elapsedTime: body.elapsedTime
         })
-        console.log('[API] Updated pomodoro:', updated)
         return NextResponse.json({ success: true, data: updated })
 
       default:
@@ -146,7 +117,6 @@ export async function PATCH(req: NextRequest) {
   } catch (error: any) {
     console.error('[API] Update pomodoro error:', error)
 
-    // Zod 验证错误
     if (error.name === 'ZodError') {
       return NextResponse.json(
         {

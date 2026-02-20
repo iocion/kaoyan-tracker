@@ -12,47 +12,44 @@ interface UseTimerReturn {
   isLoading: boolean
   isRunning: boolean
   isPaused: boolean
-  remaining: number // 剩余秒数
-  progress: number // 进度百分比 0-100
-
-  // 操作
+  remaining: number
+  progress: number
   start: (taskId?: string | null, type?: PomodoroType, duration?: number) => Promise<void>
   pause: () => Promise<void>
   resume: () => Promise<void>
   complete: () => Promise<void>
   cancel: () => Promise<void>
   refresh: () => Promise<void>
-
-  // 工具
   formatTime: (seconds: number) => string
 }
 
-/**
- * 番茄钟 Hook
- * 管理番茄钟状态和操作
- */
 export function useTimer(options: UseTimerOptions = {}): UseTimerReturn {
   const [pomodoro, setPomodoro] = useState<Pomodoro | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const intervalRef = useRef<NodeJS.Timeout | null>(null)
+  const elapsedTimeRef = useRef<number>(0)
+  const pomodoroRef = useRef<Pomodoro | null>(null)
 
   const { onTick, onComplete, onError } = options
 
-  // 计算剩余时间
+  useEffect(() => {
+    pomodoroRef.current = pomodoro
+    if (pomodoro) {
+      elapsedTimeRef.current = pomodoro.elapsedTime
+    }
+  }, [pomodoro])
+
   const remaining = pomodoro
-    ? Math.max(0, pomodoro.duration - pomodoro.elapsedTime)
+    ? Math.max(0, pomodoro.duration - elapsedTimeRef.current)
     : 0
 
-  // 计算进度
-  const progress = pomodoro
-    ? (pomodoro.elapsedTime / pomodoro.duration) * 100
+  const progress = pomodoro && pomodoro.duration > 0
+    ? (elapsedTimeRef.current / pomodoro.duration) * 100
     : 0
 
-  // 判断状态
   const isRunning = pomodoro?.status === PomodoroStatus.RUNNING
   const isPaused = pomodoro?.status === PomodoroStatus.PAUSED
 
-  // 获取当前番茄钟
   const refresh = useCallback(async () => {
     setIsLoading(true)
     try {
@@ -71,7 +68,6 @@ export function useTimer(options: UseTimerOptions = {}): UseTimerReturn {
     }
   }, [onError])
 
-  // 开始番茄钟
   const start = useCallback(async (
     taskId?: string | null,
     type: PomodoroType = PomodoroType.FOCUS,
@@ -98,9 +94,9 @@ export function useTimer(options: UseTimerOptions = {}): UseTimerReturn {
     }
   }, [onError])
 
-  // 暂停
   const pause = useCallback(async () => {
-    if (!pomodoro) return
+    const current = pomodoroRef.current
+    if (!current) return
 
     setIsLoading(true)
     try {
@@ -109,7 +105,7 @@ export function useTimer(options: UseTimerOptions = {}): UseTimerReturn {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action: 'pause',
-          id: pomodoro.id
+          id: current.id
         })
       })
       const result = await response.json()
@@ -124,11 +120,11 @@ export function useTimer(options: UseTimerOptions = {}): UseTimerReturn {
     } finally {
       setIsLoading(false)
     }
-  }, [pomodoro, onError])
+  }, [onError])
 
-  // 继续
   const resume = useCallback(async () => {
-    if (!pomodoro) return
+    const current = pomodoroRef.current
+    if (!current) return
 
     setIsLoading(true)
     try {
@@ -137,7 +133,7 @@ export function useTimer(options: UseTimerOptions = {}): UseTimerReturn {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action: 'resume',
-          id: pomodoro.id
+          id: current.id
         })
       })
       const result = await response.json()
@@ -152,11 +148,11 @@ export function useTimer(options: UseTimerOptions = {}): UseTimerReturn {
     } finally {
       setIsLoading(false)
     }
-  }, [pomodoro, onError])
+  }, [onError])
 
-  // 完成
   const complete = useCallback(async () => {
-    if (!pomodoro) return
+    const current = pomodoroRef.current
+    if (!current) return
 
     setIsLoading(true)
     try {
@@ -165,13 +161,14 @@ export function useTimer(options: UseTimerOptions = {}): UseTimerReturn {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action: 'complete',
-          id: pomodoro.id
+          id: current.id
         })
       })
       const result = await response.json()
 
       if (result.success) {
         setPomodoro(null)
+        elapsedTimeRef.current = 0
         onComplete?.()
       } else {
         onError?.(result.error || '完成失败')
@@ -181,11 +178,11 @@ export function useTimer(options: UseTimerOptions = {}): UseTimerReturn {
     } finally {
       setIsLoading(false)
     }
-  }, [pomodoro, onError, onComplete])
+  }, [onError, onComplete])
 
-  // 取消
   const cancel = useCallback(async () => {
-    if (!pomodoro) return
+    const current = pomodoroRef.current
+    if (!current) return
 
     setIsLoading(true)
     try {
@@ -194,13 +191,14 @@ export function useTimer(options: UseTimerOptions = {}): UseTimerReturn {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action: 'cancel',
-          id: pomodoro.id
+          id: current.id
         })
       })
       const result = await response.json()
 
       if (result.success) {
         setPomodoro(null)
+        elapsedTimeRef.current = 0
       } else {
         onError?.(result.error || '取消失败')
       }
@@ -209,43 +207,57 @@ export function useTimer(options: UseTimerOptions = {}): UseTimerReturn {
     } finally {
       setIsLoading(false)
     }
-  }, [pomodoro, onError])
+  }, [onError])
 
-  // 定时器
   useEffect(() => {
-    if (isRunning && pomodoro) {
-      intervalRef.current = setInterval(async () => {
-        const newElapsedTime = pomodoro.elapsedTime + 1
+    const tick = async () => {
+      const current = pomodoroRef.current
+      if (!current || current.status !== PomodoroStatus.RUNNING) return
 
-        // 更新本地状态
-        setPomodoro(prev => prev ? { ...prev, elapsedTime: newElapsedTime } : null)
+      const newElapsedTime = elapsedTimeRef.current + 1
+      elapsedTimeRef.current = newElapsedTime
 
-        // 触发回调
-        onTick?.(newElapsedTime)
+      setPomodoro(prev => prev ? { ...prev, elapsedTime: newElapsedTime } : null)
+      onTick?.(newElapsedTime)
 
-        // 同步到服务器（每 10 秒一次）
-        if (newElapsedTime % 10 === 0) {
-          try {
-            await fetch('/api/pomodoro', {
-              method: 'PATCH',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                action: 'update',
-                id: pomodoro.id,
-                status: PomodoroStatus.RUNNING,
-                elapsedTime: newElapsedTime
-              })
+      if (newElapsedTime % 10 === 0 && current.id) {
+        try {
+          await fetch('/api/pomodoro', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              action: 'update',
+              id: current.id,
+              status: PomodoroStatus.RUNNING,
+              elapsedTime: newElapsedTime
             })
-          } catch (error) {
-            // 静默失败，不影响本地计时
-          }
+          })
+        } catch {
+          // Silent fail for sync
         }
+      }
 
-        // 检查是否完成
-        if (newElapsedTime >= pomodoro.duration) {
-          await complete()
+      if (newElapsedTime >= current.duration) {
+        if (intervalRef.current) {
+          clearInterval(intervalRef.current)
+          intervalRef.current = null
         }
-      }, 1000)
+        await fetch('/api/pomodoro', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'complete',
+            id: current.id
+          })
+        })
+        setPomodoro(null)
+        elapsedTimeRef.current = 0
+        onComplete?.()
+      }
+    }
+
+    if (isRunning) {
+      intervalRef.current = setInterval(tick, 1000)
     }
 
     return () => {
@@ -254,14 +266,12 @@ export function useTimer(options: UseTimerOptions = {}): UseTimerReturn {
         intervalRef.current = null
       }
     }
-  }, [isRunning, pomodoro, onTick, complete])
+  }, [isRunning, onTick, onComplete])
 
-  // 初始加载
   useEffect(() => {
     refresh()
   }, [refresh])
 
-  // 格式化时间
   const formatTime = useCallback((seconds: number): string => {
     const h = Math.floor(seconds / 3600)
     const m = Math.floor((seconds % 3600) / 60)

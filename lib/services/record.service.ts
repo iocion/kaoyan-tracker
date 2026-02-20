@@ -1,13 +1,9 @@
 import { prisma } from '@/lib/prisma'
 import { StudyRecord, StudyRecordCreateInput, Subject } from '@/types'
+import { DEFAULT_USER_ID } from '@/lib/constants'
 import { startOfDay, endOfDay } from 'date-fns'
 
-/**
- * 学习记录服务
- * 封装所有学习记录相关的业务逻辑
- */
 export class RecordService {
-  private static readonly DEFAULT_USER_ID = 'default'
 
   /**
    * 获取所有学习记录
@@ -15,7 +11,7 @@ export class RecordService {
   static async getAll(limit: number = 50): Promise<StudyRecord[]> {
     try {
       const records = await prisma.studyRecord.findMany({
-        where: { userId: this.DEFAULT_USER_ID },
+        where: { userId: DEFAULT_USER_ID },
         orderBy: { createdAt: 'desc' },
         take: limit
       })
@@ -34,7 +30,7 @@ export class RecordService {
     try {
       const records = await prisma.studyRecord.findMany({
         where: {
-          userId: this.DEFAULT_USER_ID,
+          userId: DEFAULT_USER_ID,
           subject
         },
         orderBy: { createdAt: 'desc' },
@@ -55,7 +51,7 @@ export class RecordService {
     try {
       const records = await prisma.studyRecord.findMany({
         where: {
-          userId: this.DEFAULT_USER_ID,
+          userId: DEFAULT_USER_ID,
           createdAt: { gte: startDate, lte: endDate }
         },
         orderBy: { createdAt: 'desc' }
@@ -75,7 +71,7 @@ export class RecordService {
     try {
       const record = await prisma.studyRecord.create({
         data: {
-          userId: this.DEFAULT_USER_ID,
+          userId: DEFAULT_USER_ID,
           subject: input.subject,
           duration: input.duration,
           notes: input.notes
@@ -94,13 +90,14 @@ export class RecordService {
    */
   static async update(id: string, input: Partial<StudyRecordCreateInput>): Promise<StudyRecord> {
     try {
+      const data: Record<string, unknown> = {}
+      if (input.subject !== undefined) data.subject = input.subject
+      if (input.duration !== undefined) data.duration = input.duration
+      if (input.notes !== undefined) data.notes = input.notes
+
       const record = await prisma.studyRecord.update({
         where: { id },
-        data: {
-          subject: input.subject,
-          duration: input.duration,
-          notes: input.notes
-        }
+        data
       })
 
       return record as StudyRecord
@@ -149,7 +146,7 @@ export class RecordService {
 
     const records = await prisma.studyRecord.findMany({
       where: {
-        userId: this.DEFAULT_USER_ID,
+        userId: DEFAULT_USER_ID,
         createdAt: { gte: startDate }
       }
     })

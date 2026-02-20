@@ -17,7 +17,17 @@ export const dynamic = 'force-dynamic'
  * 只需在浏览器中访问即可！
  */
 export async function GET() {
-  return await initDatabase()
+  // 构建时跳过，避免直接实例化 PrismaClient
+  if (!process.env.POSTGRES_URL && !process.env.DATABASE_URL) {
+    return NextResponse.json({
+      success: false,
+      error: 'Database connection not configured. Set POSTGRES_URL or DATABASE_URL.'
+    }, { status: 500 })
+  }
+
+  const { prisma } = await import('@/lib/prisma')
+
+  return await initDatabase(prisma)
 }
 
 /**
@@ -25,10 +35,20 @@ export async function GET() {
  * 与 GET 相同的功能，方便通过脚本调用
  */
 export async function POST() {
-  return await initDatabase()
+  // 构建时跳过，避免直接实例化 PrismaClient
+  if (!process.env.POSTGRES_URL && !process.env.DATABASE_URL) {
+    return NextResponse.json({
+      success: false,
+      error: 'Database connection not configured. Set POSTGRES_URL or DATABASE_URL.'
+    }, { status: 500 })
+  }
+
+  const { prisma } = await import('@/lib/prisma')
+
+  return await initDatabase(prisma)
 }
 
-async function initDatabase() {
+async function initDatabase(prisma: any) {
   try {
     const userId = 'default'
 

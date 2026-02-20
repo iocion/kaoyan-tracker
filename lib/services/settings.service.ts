@@ -1,33 +1,16 @@
 import { prisma } from '@/lib/prisma'
 import { UserSettings, SettingsUpdateInput } from '@/types'
+import { DEFAULT_USER_ID, DEFAULT_SETTINGS } from '@/lib/constants'
 
-/**
- * 设置服务
- * 封装所有用户设置相关的业务逻辑
- */
 export class SettingsService {
-  private static readonly DEFAULT_USER_ID = 'default'
-  private static readonly DEFAULT_SETTINGS = {
-    focusDuration: 25,
-    breakDuration: 5,
-    longBreakDuration: 15,
-    pomodorosUntilLongBreak: 4,
-    autoStartBreak: false,
-    autoStartFocus: false,
-    soundEnabled: true,
-    vibrationEnabled: true
-  }
+  private static cache: UserSettings | null = null
 
-  /**
-   * 获取用户设置
-   */
   static async get(): Promise<UserSettings> {
     try {
       let settings = await prisma.userSettings.findUnique({
-        where: { userId: this.DEFAULT_USER_ID }
+        where: { userId: DEFAULT_USER_ID }
       })
 
-      // 如果不存在，创建默认设置
       if (!settings) {
         settings = await this.createDefault()
       }
@@ -39,17 +22,14 @@ export class SettingsService {
     }
   }
 
-  /**
-   * 更新用户设置
-   */
   static async update(input: SettingsUpdateInput): Promise<UserSettings> {
     try {
       const settings = await prisma.userSettings.upsert({
-        where: { userId: this.DEFAULT_USER_ID },
+        where: { userId: DEFAULT_USER_ID },
         update: input,
         create: {
-          userId: this.DEFAULT_USER_ID,
-          ...this.DEFAULT_SETTINGS,
+          userId: DEFAULT_USER_ID,
+          ...DEFAULT_SETTINGS,
           ...input
         }
       })
@@ -61,17 +41,14 @@ export class SettingsService {
     }
   }
 
-  /**
-   * 重置为默认设置
-   */
   static async reset(): Promise<UserSettings> {
     try {
       const settings = await prisma.userSettings.upsert({
-        where: { userId: this.DEFAULT_USER_ID },
-        update: this.DEFAULT_SETTINGS,
+        where: { userId: DEFAULT_USER_ID },
+        update: DEFAULT_SETTINGS,
         create: {
-          userId: this.DEFAULT_USER_ID,
-          ...this.DEFAULT_SETTINGS
+          userId: DEFAULT_USER_ID,
+          ...DEFAULT_SETTINGS
         }
       })
 
@@ -82,24 +59,16 @@ export class SettingsService {
     }
   }
 
-  /**
-   * 创建默认设置
-   */
   private static async createDefault(): Promise<UserSettings> {
     const settings = await prisma.userSettings.create({
       data: {
-        userId: this.DEFAULT_USER_ID,
-        ...this.DEFAULT_SETTINGS
+        userId: DEFAULT_USER_ID,
+        ...DEFAULT_SETTINGS
       }
     })
 
     return settings as UserSettings
   }
-
-  /**
-   * 获取设置值（带缓存）
-   */
-  private static cache: UserSettings | null = null
 
   static async getCached(): Promise<UserSettings> {
     if (this.cache) {
@@ -110,23 +79,13 @@ export class SettingsService {
     return this.cache
   }
 
-  /**
-   * 清除缓存
-   */
   static clearCache(): void {
     this.cache = null
   }
 
-  /**
-   * 批量更新设置
-   */
   static async batchUpdate(updates: SettingsUpdateInput): Promise<UserSettings> {
-    // 更新设置
     const settings = await this.update(updates)
-
-    // 清除缓存
     this.clearCache()
-
     return settings
   }
 }

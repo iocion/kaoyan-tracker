@@ -136,6 +136,10 @@ export const recordQuerySchema = z.object({
   subject: z.nativeEnum(Subject).optional()
 })
 
+export const recordDeleteSchema = z.object({
+  id: z.string().min(1, '记录 ID 不能为空')
+})
+
 // ============ 导出类型 ============
 
 export type PomodoroCreateInput = z.infer<typeof pomodoroCreateSchema>

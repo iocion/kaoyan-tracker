@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma'
+import { Prisma } from '@prisma/client'
 import {
   Pomodoro,
   PomodoroCreateInput,
@@ -7,14 +8,17 @@ import {
   PomodoroStatus,
   PomodoroStats
 } from '@/types'
-import { startOfDay, endOfDay, subDays, differenceInSeconds } from 'date-fns'
+import { DEFAULT_USER_ID } from '@/lib/constants'
+import { startOfDay, endOfDay, subDays } from 'date-fns'
 
-/**
- * 番茄钟服务
- * 封装所有番茄钟相关的业务逻辑
- */
+const SUBJECT_FIELD_MAP: Record<string, string> = {
+  COMPUTER_408: 'pomodoros408',
+  MATH: 'pomodorosMath',
+  ENGLISH: 'pomodorosEnglish',
+  POLITICS: 'pomodorosPolitics'
+}
+
 export class PomodoroService {
-  private static readonly DEFAULT_USER_ID = 'default'
 
   /**
    * 获取当前正在进行的番茄钟
@@ -23,7 +27,7 @@ export class PomodoroService {
     try {
       const activePomodoro = await prisma.pomodoro.findFirst({
         where: {
-          userId: this.DEFAULT_USER_ID,
+          userId: DEFAULT_USER_ID,
           status: { in: [PomodoroStatus.RUNNING, PomodoroStatus.PAUSED] }
         },
         include: {
@@ -49,7 +53,7 @@ export class PomodoroService {
       // 创建新的番茄钟
       const pomodoro = await prisma.pomodoro.create({
         data: {
-          userId: this.DEFAULT_USER_ID,
+          userId: DEFAULT_USER_ID,
           taskId: input.taskId,
           type: input.type,
           status: PomodoroStatus.RUNNING,
@@ -118,26 +122,81 @@ export class PomodoroService {
    */
   static async complete(id: string): Promise<Pomodoro> {
     try {
-      const pomodoro = await prisma.pomodoro.update({
-        where: { id },
-        data: {
-          status: PomodoroStatus.COMPLETED,
-          endedAt: new Date()
-        },
-        include: {
-          task: true
+      const result = await prisma.$transaction(async (tx) => {
+        const pomodoro = await tx.pomodoro.update({
+          where: { id },
+          data: {
+            status: PomodoroStatus.COMPLETED,
+            endedAt: new Date()
+          },
+          include: {
+            task: true
+          }
+        })
+
+        const today = startOfDay(new Date())
+        const userId = pomodoro.userId
+
+        let subjectField: string | null = null
+        if (pomodoro.taskId) {
+          const task = await tx.task.findUnique({
+            where: { id: pomodoro.taskId },
+            select: { subject: true }
+          })
+          if (task) {
+            subjectField = SUBJECT_FIELD_MAP[task.subject] || null
+          }
         }
+
+        await tx.dailyStat.upsert({
+          where: {
+            userId_date: { userId, date: today }
+          },
+          update: {
+            totalPomodoros: { increment: 1 },
+            ...(pomodoro.type === PomodoroType.FOCUS && {
+              totalFocusTime: { increment: pomodoro.elapsedTime }
+            }),
+            ...(pomodoro.type !== PomodoroType.FOCUS && {
+              totalBreakTime: { increment: pomodoro.elapsedTime }
+            }),
+            ...(subjectField && { [subjectField]: { increment: 1 } })
+          },
+          create: {
+            userId,
+            date: today,
+            totalPomodoros: 1,
+            totalFocusTime: pomodoro.type === PomodoroType.FOCUS ? pomodoro.elapsedTime : 0,
+            totalBreakTime: pomodoro.type !== PomodoroType.FOCUS ? pomodoro.elapsedTime : 0,
+            ...(subjectField && { [subjectField]: 1 })
+          }
+        })
+
+        if (pomodoro.type === PomodoroType.FOCUS && pomodoro.taskId) {
+          const task = await tx.task.findUnique({
+            where: { id: pomodoro.taskId },
+            select: { estimatedPomodoros: true, completedPomodoros: true }
+          })
+
+          if (task) {
+            const newCompleted = task.completedPomodoros + 1
+            const shouldComplete = newCompleted >= task.estimatedPomodoros
+
+            await tx.task.update({
+              where: { id: pomodoro.taskId },
+              data: {
+                completedPomodoros: { increment: 1 },
+                isCompleted: shouldComplete,
+                ...(shouldComplete && { completedAt: new Date() })
+              }
+            })
+          }
+        }
+
+        return pomodoro
       })
 
-      // 更新每日统计
-      await this.updateDailyStats(pomodoro as Pomodoro)
-
-      // 如果是专注且有任务，更新任务进度
-      if (pomodoro.type === PomodoroType.FOCUS && pomodoro.taskId) {
-        await this.updateTaskProgress(pomodoro.taskId)
-      }
-
-      return pomodoro as Pomodoro
+      return result as Pomodoro
     } catch (error) {
       console.error('[PomodoroService] Complete error:', error)
       throw new Error('完成番茄钟失败')
@@ -177,7 +236,6 @@ export class PomodoroService {
         data: {
           status: input.status,
           elapsedTime: input.elapsedTime,
-          ...(input.status === PomodoroStatus.PAUSED && { pauseCount: { increment: 1 } }),
           ...(input.status === PomodoroStatus.COMPLETED && { endedAt: new Date() }),
           ...(input.status === PomodoroStatus.CANCELLED && { endedAt: new Date() })
         },
@@ -199,7 +257,7 @@ export class PomodoroService {
   private static async cancelAllActive(): Promise<void> {
     await prisma.pomodoro.updateMany({
       where: {
-        userId: this.DEFAULT_USER_ID,
+        userId: DEFAULT_USER_ID,
         status: { in: [PomodoroStatus.RUNNING, PomodoroStatus.PAUSED] }
       },
       data: {
@@ -308,7 +366,7 @@ export class PomodoroService {
 
     const pomodoros = await prisma.pomodoro.findMany({
       where: {
-        userId: this.DEFAULT_USER_ID,
+        userId: DEFAULT_USER_ID,
         startedAt: { gte: startDate, lte: endDate }
       }
     })
@@ -377,7 +435,7 @@ export class PomodoroService {
   static async getHistory(limit: number = 20): Promise<Pomodoro[]> {
     const pomodoros = await prisma.pomodoro.findMany({
       where: {
-        userId: this.DEFAULT_USER_ID,
+        userId: DEFAULT_USER_ID,
         status: { in: [PomodoroStatus.COMPLETED, PomodoroStatus.CANCELLED] }
       },
       include: {

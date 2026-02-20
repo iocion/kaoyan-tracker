@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { RecordService } from '@/lib/services/record.service'
-import { recordCreateSchema, recordQuerySchema } from '@/lib/validators'
+import { recordCreateSchema, recordQuerySchema, recordDeleteSchema } from '@/lib/validators'
 
 export const dynamic = 'force-dynamic'
 
@@ -106,26 +106,28 @@ export async function POST(req: NextRequest) {
 export async function DELETE(req: NextRequest) {
   try {
     const body = await req.json()
-    const { id } = body
+    const validated = recordDeleteSchema.parse(body)
 
-    if (!id) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: '缺少记录 ID'
-        },
-        { status: 400 }
-      )
-    }
-
-    await RecordService.delete(id)
+    await RecordService.delete(validated.id)
 
     return NextResponse.json({
       success: true,
       data: { message: '记录已删除' }
     })
-  } catch (error) {
+  } catch (error: any) {
     console.error('[API] Delete record error:', error)
+
+    if (error.name === 'ZodError') {
+      return NextResponse.json(
+        {
+          success: false,
+          error: '参数验证失败',
+          details: error.errors
+        },
+        { status: 400 }
+      )
+    }
+
     return NextResponse.json(
       {
         success: false,

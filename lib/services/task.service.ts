@@ -1,12 +1,8 @@
 import { prisma } from '@/lib/prisma'
 import { Task, TaskCreateInput, TaskUpdateInput, Subject } from '@/types'
+import { DEFAULT_USER_ID } from '@/lib/constants'
 
-/**
- * 任务服务
- * 封装所有任务相关的业务逻辑
- */
 export class TaskService {
-  private static readonly DEFAULT_USER_ID = 'default'
 
   /**
    * 获取所有任务
@@ -14,7 +10,7 @@ export class TaskService {
   static async getAll(): Promise<Task[]> {
     try {
       const tasks = await prisma.task.findMany({
-        where: { userId: this.DEFAULT_USER_ID },
+        where: { userId: DEFAULT_USER_ID },
         include: {
           pomodoros: {
             where: {
@@ -65,7 +61,7 @@ export class TaskService {
     try {
       const task = await prisma.task.findFirst({
         where: {
-          userId: this.DEFAULT_USER_ID,
+          userId: DEFAULT_USER_ID,
           isActive: true
         },
         include: {
@@ -94,14 +90,14 @@ export class TaskService {
     try {
       // 如果有其他激活的任务，先取消激活
       await prisma.task.updateMany({
-        where: { userId: this.DEFAULT_USER_ID, isActive: true },
+        where: { userId: DEFAULT_USER_ID, isActive: true },
         data: { isActive: false }
       })
 
       // 创建新任务
       const task = await prisma.task.create({
         data: {
-          userId: this.DEFAULT_USER_ID,
+          userId: DEFAULT_USER_ID,
           title: input.title,
           subject: input.subject,
           estimatedPomodoros: input.estimatedPomodoros || 1,
@@ -126,7 +122,7 @@ export class TaskService {
       if (input.isActive) {
         await prisma.task.updateMany({
           where: {
-            userId: this.DEFAULT_USER_ID,
+            userId: DEFAULT_USER_ID,
             isActive: true,
             id: { not: id }
           },
@@ -173,7 +169,7 @@ export class TaskService {
     try {
       // 先取消所有任务的活跃状态
       await prisma.task.updateMany({
-        where: { userId: this.DEFAULT_USER_ID, isActive: true },
+        where: { userId: DEFAULT_USER_ID, isActive: true },
         data: { isActive: false }
       })
 
@@ -201,7 +197,7 @@ export class TaskService {
   }> {
     try {
       const tasks = await prisma.task.findMany({
-        where: { userId: this.DEFAULT_USER_ID }
+        where: { userId: DEFAULT_USER_ID }
       })
 
       const total = tasks.length
@@ -229,7 +225,7 @@ export class TaskService {
     try {
       const tasks = await prisma.task.findMany({
         where: {
-          userId: this.DEFAULT_USER_ID,
+          userId: DEFAULT_USER_ID,
           subject
         },
         orderBy: [
@@ -253,7 +249,7 @@ export class TaskService {
     try {
       const tasks = await prisma.task.findMany({
         where: {
-          userId: this.DEFAULT_USER_ID,
+          userId: DEFAULT_USER_ID,
           isCompleted: false
         },
         orderBy: [

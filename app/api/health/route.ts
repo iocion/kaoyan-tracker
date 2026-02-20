@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
 
 export const dynamic = 'force-dynamic'
 
@@ -8,6 +7,16 @@ export const dynamic = 'force-dynamic'
  * 健康检查端点
  */
 export async function GET() {
+  // 构建时跳过，避免直接实例化 PrismaClient
+  if (!process.env.POSTGRES_URL && !process.env.DATABASE_URL) {
+    return NextResponse.json({
+      success: false,
+      error: 'Database connection not configured. Set POSTGRES_URL or DATABASE_URL.'
+    }, { status: 500 })
+  }
+
+  const { prisma } = await import('@/lib/prisma')
+
   try {
     // 检查数据库连接
     await prisma.$queryRaw`SELECT 1`

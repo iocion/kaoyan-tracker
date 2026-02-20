@@ -1,13 +1,9 @@
 import { prisma } from '@/lib/prisma'
 import { startOfDay, endOfDay, subDays, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from 'date-fns'
 import { Subject, StatSummary, PieChartData, ChartDataPoint } from '@/types'
+import { DEFAULT_USER_ID } from '@/lib/constants'
 
-/**
- * 统计服务
- * 封装所有统计数据相关的业务逻辑
- */
 export class StatsService {
-  private static readonly DEFAULT_USER_ID = 'default'
 
   /**
    * 获取统计摘要
@@ -17,7 +13,7 @@ export class StatsService {
 
     const stats = await prisma.dailyStat.findMany({
       where: {
-        userId: this.DEFAULT_USER_ID,
+        userId: DEFAULT_USER_ID,
         date: { gte: startDate, lte: endDate }
       },
       orderBy: { date: 'asc' }
@@ -119,7 +115,7 @@ export class StatsService {
 
     const stats = await prisma.dailyStat.findMany({
       where: {
-        userId: this.DEFAULT_USER_ID,
+        userId: DEFAULT_USER_ID,
         date: { gte: startDate, lte: endDate }
       },
       orderBy: { date: 'asc' }
@@ -173,7 +169,7 @@ export class StatsService {
 
     const stats = await prisma.dailyStat.findMany({
       where: {
-        userId: this.DEFAULT_USER_ID,
+        userId: DEFAULT_USER_ID,
         date: { gte: startDate, lte: endDate }
       },
       orderBy: { date: 'asc' }
@@ -278,7 +274,7 @@ export class StatsService {
 
     const stats = await prisma.dailyStat.findMany({
       where: {
-        userId: this.DEFAULT_USER_ID,
+        userId: DEFAULT_USER_ID,
         date: { gte: startDate, lte: endDate }
       },
       select: {
