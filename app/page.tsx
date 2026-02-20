@@ -1,162 +1,162 @@
 import Link from 'next/link'
-import { Clock, BarChart3, List, Plus, Settings, ChevronRight } from 'lucide-react'
+import { Timer, BarChart3, List, Settings, PlusCircle, Calendar, TrendingUp, Moon } from 'lucide-react'
+import { colors } from '@/lib/styles/colors'
 
+/**
+ * Apple 风格首页 - iOS 主屏幕风格
+ * 淡浅蓝色主题，类似 Foucs
+ */
 export default function HomePage() {
+  const apps = [
+    {
+      name: '番茄钟',
+      icon: Timer,
+      href: '/timer',
+      color: colors.primary,
+      description: '25分钟专注学习',
+    },
+    {
+      name: '统计',
+      icon: BarChart3,
+      href: '/records',
+      color: colors.subjectMath,
+      description: '学习数据分析',
+    },
+    {
+      name: '任务',
+      icon: List,
+      href: '/tasks',
+      color: colors.subjectEnglish,
+      description: '管理考研任务',
+    },
+    {
+      name: '日历',
+      icon: Calendar,
+      href: '/calendar',
+      color: colors.subjectPolitics,
+      description: '学习计划安排',
+    },
+    {
+      name: '趋势',
+      icon: TrendingUp,
+      href: '/trends',
+      color: colors.success,
+      description: '学习进度追踪',
+    },
+    {
+      name: '设置',
+      icon: Settings,
+      href: '/settings',
+      color: colors.textSecondary,
+      description: '应用偏好设置',
+    },
+  ]
+
   return (
-    <div className="min-h-screen bg-gradient-to-b from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
-      {/* 状态栏 */}
-      <div className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
-        <div className="px-4 py-3">
-          <div className="flex justify-between items-center">
-            <span className="text-lg font-semibold text-gray-900 dark:text-white">
-              🍅
-            </span>
-            <div className="flex items-center gap-4">
-              <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center">
-                <Clock className="w-5 h-5 text-white" />
-              </div>
-              <ChevronRight className="w-5 h-5 text-gray-400" />
-            </div>
-          </div>
+    <div className="max-w-4xl mx-auto">
+      {/* 顶部标题栏 */}
+      <div className="flex items-center justify-between mb-8">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+            考研番茄钟
+          </h1>
+          <p className="text-gray-500 dark:text-gray-400 mt-1">
+            高效学习，成就未来
+          </p>
         </div>
+
+        <button className="flex items-center gap-2 px-4 py-2 rounded-full bg-[#60a5fa] text-white font-medium hover:bg-[#3b82f6] transition-colors">
+          <PlusCircle className="w-5 h-5" />
+          新任务
+        </button>
       </div>
 
-      {/* 主内容区 */}
-      <div className="px-4 py-6 max-w-lg mx-auto">
-        {/* 开始学习 */}
-        <Link
-          href="/timer"
-          className="block bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 mb-4"
-        >
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-blue-500 rounded-xl flex items-center justify-center flex-shrink-0">
-              <Clock className="w-6 h-6 text-white" />
+      {/* 应用网格 - iOS 风格 */}
+      <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-6">
+        {apps.map((app) => (
+          <Link
+            key={app.name}
+            href={app.href}
+            className="group flex flex-col items-center gap-3 p-4 rounded-3xl hover:bg-white/50 dark:hover:bg-white/5 transition-all duration-200"
+          >
+            <div
+              className="w-16 h-16 rounded-2xl flex items-center justify-center shadow-lg transition-transform duration-200 group-hover:scale-105"
+              style={{ backgroundColor: app.color }}
+            >
+              <app.icon className="w-8 h-8 text-white" />
+            </div>
+            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+              {app.name}
+            </span>
+          </Link>
+        ))}
+      </div>
+
+      {/* 快捷操作 */}
+      <div className="mt-12">
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+          快捷操作
+        </h2>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <Link
+            href="/timer"
+            className="flex items-center gap-4 p-6 rounded-2xl bg-white dark:bg-gray-900 shadow-sm hover:shadow-md transition-shadow"
+          >
+            <div className="w-12 h-12 rounded-xl bg-[#60a5fa] flex items-center justify-center">
+              <Timer className="w-6 h-6 text-white" />
             </div>
             <div className="flex-1">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">
-                开始专注
-              </h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                25分钟专注 · 自动休息提醒
-              </p>
+              <h3 className="font-medium text-gray-900 dark:text-white">开始专注</h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400">25分钟专注学习</p>
             </div>
-            <ChevronRight className="w-6 h-6 text-blue-500" />
-          </div>
-        </Link>
+            <div className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+              <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </div>
+          </Link>
 
-        {/* 学习统计 */}
-        <Link
-          href="/records"
-          className="block bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 mb-4"
-        >
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-indigo-500 rounded-xl flex items-center justify-center flex-shrink-0">
+          <Link
+            href="/records"
+            className="flex items-center gap-4 p-6 rounded-2xl bg-white dark:bg-gray-900 shadow-sm hover:shadow-md transition-shadow"
+          >
+            <div className="w-12 h-12 rounded-xl bg-[#8b5cf6] flex items-center justify-center">
               <BarChart3 className="w-6 h-6 text-white" />
             </div>
             <div className="flex-1">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">
-                学习统计
-              </h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                今日数据 · 学科分析
-              </p>
+              <h3 className="font-medium text-gray-900 dark:text-white">查看统计</h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400">今日学习数据分析</p>
             </div>
-            <ChevronRight className="w-6 h-6 text-indigo-500" />
-          </div>
-        </Link>
-
-        {/* 任务管理 */}
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 mb-4">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-green-500 rounded-xl flex items-center justify-center flex-shrink-0">
-              <List className="w-6 h-6 text-white" />
+            <div className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+              <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
             </div>
-            <div className="flex-1">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">
-                任务管理
-              </h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                4个待办任务 · 进度追踪
-              </p>
-            </div>
-            <ChevronRight className="w-6 h-6 text-green-500" />
-          </div>
-        </div>
-
-        {/* 个性化设置 */}
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-purple-500 rounded-xl flex items-center justify-center flex-shrink-0">
-              <Settings className="w-6 h-6 text-white" />
-            </div>
-            <div className="flex-1">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">
-                个性化
-              </h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                自定义时长 · 声音提醒
-              </p>
-            </div>
-            <ChevronRight className="w-6 h-6 text-purple-500" />
-          </div>
-        </div>
-
-        {/* 快速添加任务 */}
-        <div className="bg-blue-500 dark:bg-blue-600 rounded-2xl shadow-sm p-6">
-          <div className="flex items-center justify-center gap-3">
-            <Plus className="w-8 h-8 text-white" />
-            <span className="text-white font-semibold text-lg">
-              添加任务
-            </span>
-          </div>
+          </Link>
         </div>
       </div>
 
-      {/* 底部信息 */}
-      <div className="px-4 py-4 bg-white dark:bg-gray-800 border-t border-gray-100 dark:border-gray-700">
-        <div className="text-center">
-          <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-            今天已完成 <span className="text-blue-600 dark:text-blue-400 font-semibold">0</span> 个番茄
-          </p>
-          <p className="text-xs text-gray-500 dark:text-gray-500">
-            保持专注，成就未来 🚀
-          </p>
-        </div>
-      </div>
-
-      {/* 底部导航栏 */}
-      <div className="bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
-        <div className="px-4 py-3">
-          <div className="flex justify-around items-center">
-            <Link
-              href="/timer"
-              className={`flex flex-col items-center gap-1 p-3 rounded-xl transition-all ${
-                false ? 'bg-blue-50 dark:bg-blue-900' : ''
-              }`}
-            >
-              <Clock className={`w-6 h-6 ${false ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400'}`} />
-              <span className={`text-sm font-medium ${false ? 'text-blue-900 dark:text-blue-100' : 'text-gray-600 dark:text-gray-400'}`}>
-                计时
-              </span>
-            </Link>
-
-            <Link
-              href="/records"
-              className={`flex flex-col items-center gap-1 p-3 rounded-xl transition-all ${
-                false ? 'bg-blue-50 dark:bg-blue-900' : ''
-              }`}
-            >
-              <BarChart3 className={`w-6 h-6 ${false ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400'}`} />
-              <span className={`text-sm font-medium ${false ? 'text-blue-900 dark:text-blue-100' : 'text-gray-600 dark:text-gray-400'}`}>
-                统计
-              </span>
-            </Link>
-
-            <div className="w-12 h-12 bg-gray-200 dark:bg-gray-700 rounded-xl flex items-center justify-center">
-              <Settings className="w-6 h-6 text-gray-600 dark:text-gray-400" />
+      {/* 今日统计卡片 */}
+      <div className="mt-8 grid grid-cols-2 sm:grid-cols-4 gap-4">
+        {[
+          { label: '今日番茄', value: '4', color: colors.primary },
+          { label: '专注时长', value: '2h', color: colors.subjectMath },
+          { label: '完成任务', value: '3', color: colors.subjectEnglish },
+          { label: '连续天数', value: '7', color: colors.subjectPolitics },
+        ].map((stat) => (
+          <div
+            key={stat.label}
+            className="p-4 rounded-2xl bg-white dark:bg-gray-900 shadow-sm"
+          >
+            <div className="text-2xl font-bold text-gray-900 dark:text-white mb-1">
+              {stat.value}
+            </div>
+            <div className="text-sm text-gray-500 dark:text-gray-400">
+              {stat.label}
             </div>
           </div>
-        </div>
+        ))}
       </div>
     </div>
   )

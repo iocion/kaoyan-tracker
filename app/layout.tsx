@@ -1,12 +1,13 @@
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
+import { Sidebar } from '@/components/Sidebar'
 
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: '考研番茄钟 - 专注学习，成就未来',
-  description: '考研学习追踪器，番茄钟计时，任务管理，学习统计',
+  title: '考研番茄钟',
+  description: 'Apple 风格的原生考研番茄钟应用',
 }
 
 export default function RootLayout({
@@ -16,7 +17,16 @@ export default function RootLayout({
 }) {
   return (
     <html lang="zh-CN">
-      <body className={inter.className}>{children}</body>
+      <body className={`${inter.className} bg-[#fafafa] dark:bg-[#0a0a0a]`}>
+        <div className="flex h-screen">
+          <Sidebar />
+          <main className="flex-1 ml-64 overflow-auto">
+            <div className="min-h-screen p-8">
+              {children}
+            </div>
+          </main>
+        </div>
+      </body>
     </html>
   )
 }

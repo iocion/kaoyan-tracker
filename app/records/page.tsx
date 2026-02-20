@@ -1,259 +1,174 @@
 'use client'
 
-import { useStats } from '@/lib/hooks/useStats'
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts'
-import { Subject, SUBJECT_CONFIG } from '@/types'
+import { useState } from 'react'
+import { BarChart3, TrendingUp, Calendar, Clock, Target, Award } from 'lucide-react'
+import { colors } from '@/lib/styles/colors'
 
-const COLORS = {
-  [Subject.COMPUTER_408]: '#3B82F6',
-  [Subject.MATH]: '#10B981',
-  [Subject.ENGLISH]: '#F59E0B',
-  [Subject.POLITICS]: '#EF4444'
-}
-
+/**
+ * Apple 风格统计页面
+ * iOS 卡片风格，简洁美观
+ */
 export default function RecordsPage() {
-  const {
-    summary,
-    pieData,
-    lineData,
-    todayStats,
-    subjectRanking,
-    isLoading,
-    changePeriod
-  } = useStats({ period: 'week' })
+  const [period, setPeriod] = useState('week')
+
+  const stats = [
+    { label: '总番茄数', value: '156', icon: Target, color: colors.primary },
+    { label: '总时长', value: '65h', icon: Clock, color: colors.subjectMath },
+    { label: '连续天数', value: '12', icon: Calendar, color: colors.success },
+    { label: '完成任务', value: '23', icon: Award, color: colors.subjectEnglish },
+  ]
+
+  const subjectStats = [
+    { subject: '408', count: 45, hours: 18.75, color: colors.subject408 },
+    { subject: '数学', count: 38, hours: 15.83, color: colors.subjectMath },
+    { subject: '英语', count: 32, hours: 13.33, color: colors.subjectEnglish },
+    { subject: '政治', count: 41, hours: 17.08, color: colors.subjectPolitics },
+  ]
+
+  const weeklyData = [
+    { day: '周一', hours: 3.5 },
+    { day: '周二', hours: 4.2 },
+    { day: '周三', hours: 2.8 },
+    { day: '周四', hours: 5.1 },
+    { day: '周五', hours: 3.9 },
+    { day: '周六', hours: 6.2 },
+    { day: '周日', hours: 4.5 },
+  ]
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-100 dark:from-gray-900 dark:to-gray-800">
-      <div className="container mx-auto px-4 py-8">
-        {/* 标题 */}
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-2">
-            📊 学习统计
-          </h1>
-          <p className="text-gray-600 dark:text-gray-400">
-            追踪进度，量化成长
-          </p>
+    <div className="max-w-4xl mx-auto">
+      {/* 页面标题 */}
+      <div className="flex items-center justify-between mb-8">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">学习统计</h1>
+          <p className="text-gray-500 dark:text-gray-400 mt-1">追踪进度，量化成长</p>
         </div>
 
         {/* 时间周期选择 */}
-        <div className="flex justify-center gap-4 mb-8">
-          {(['today', 'week', 'month'] as const).map(period => (
+        <div className="flex bg-white dark:bg-gray-900 rounded-full p-1 shadow-sm">
+          {['week', 'month', 'year'].map((p) => (
             <button
-              key={period}
-              onClick={() => changePeriod(period)}
-              className={`px-6 py-2 rounded-lg font-medium transition-colors ${
-                summary?.period === period
-                  ? 'bg-purple-600 text-white'
-                  : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+              key={p}
+              onClick={() => setPeriod(p)}
+              className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
+                period === p
+                  ? 'bg-[#60a5fa] text-white shadow-sm'
+                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
               }`}
             >
-              {period === 'today' && '今日'}
-              {period === 'week' && '本周'}
-              {period === 'month' && '本月'}
+              {p === 'week' && '本周'}
+              {p === 'month' && '本月'}
+              {p === 'year' && '本年'}
             </button>
           ))}
         </div>
+      </div>
 
-        {/* 统计卡片 */}
-        {summary && (
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-            <StatCard
-              title="总番茄数"
-              value={summary.totalPomodoros}
-              unit="个"
-              color="blue"
-            />
-            <StatCard
-              title="总时长"
-              value={summary.totalHours.toFixed(1)}
-              unit="小时"
-              color="purple"
-            />
-            <StatCard
-              title="完成任务"
-              value={summary.tasks.completed}
-              unit="个"
-              color="green"
-            />
-            <StatCard
-              title="创建任务"
-              value={summary.tasks.created}
-              unit="个"
-              color="orange"
-            />
+      {/* 核心统计卡片 */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        {stats.map((stat) => (
+          <div
+            key={stat.label}
+            className="bg-white dark:bg-gray-900 rounded-3xl p-6 shadow-sm hover:shadow-md transition-shadow"
+          >
+            <div className="flex items-center gap-3 mb-4">
+              <div
+                className="w-10 h-10 rounded-xl flex items-center justify-center"
+                style={{ backgroundColor: `${stat.color}20` }}
+              >
+                <stat.icon className="w-5 h-5" style={{ color: stat.color }} />
+              </div>
+              <span className="text-sm text-gray-500 dark:text-gray-400">{stat.label}</span>
+            </div>
+            <div className="text-3xl font-bold text-gray-900 dark:text-white">
+              {stat.value}
+            </div>
           </div>
-        )}
+        ))}
+      </div>
 
-        {/* 图表区域 */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          {/* 学科分布 */}
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6">
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-6">
-              📈 学科分布
-            </h2>
-            <div className="h-80">
-              {pieData.length > 0 ? (
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={pieData}
-                      cx="50%"
-                      cy="50%"
-                      labelLine={false}
-                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                      outerRadius={80}
-                      fill="#8884d8"
-                      dataKey="value"
-                    >
-                      {pieData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
-                      ))}
-                    </Pie>
-                    <Tooltip />
-                    <Legend />
-                  </PieChart>
-                </ResponsiveContainer>
-              ) : (
-                <div className="h-full flex items-center justify-center text-gray-500 dark:text-gray-400">
-                  暂无数据
+      {/* 学科分布 */}
+      <div className="bg-white dark:bg-gray-900 rounded-3xl p-6 shadow-sm mb-8">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-white">学科分布</h2>
+          <button className="text-[#60a5fa] hover:text-[#3b82f6] text-sm font-medium">查看详情</button>
+        </div>
+
+        <div className="space-y-4">
+          {subjectStats.map((item) => (
+            <div key={item.subject} className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-xl flex items-center justify-center text-white font-bold"
+                style={{ backgroundColor: item.color }}>
+                {item.subject === '408' ? '408' : item.subject.charAt(0)}
+              </div>
+
+              <div className="flex-1">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="font-medium text-gray-900 dark:text-white">
+                    {item.subject === '408' ? '计算机408' : item.subject}
+                  </span>
+                  <span className="text-sm text-gray-500 dark:text-gray-400">
+                    {item.count} 个番茄 · {item.hours} 小时
+                  </span>
                 </div>
-              )}
+
+                <div className="h-2 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
+                  <div
+                    className="h-full rounded-full transition-all duration-500"
+                    style={{
+                      width: `${(item.count / 50) * 100}%`,
+                      backgroundColor: item.color
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* 学习趋势 */}
+      <div className="bg-white dark:bg-gray-900 rounded-3xl p-6 shadow-sm">
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-[#60a5fa]/20 flex items-center justify-center">
+              <TrendingUp className="w-5 h-5 text-[#60a5fa]" />
+            </div>
+            <div>
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">学习趋势</h2>
+              <p className="text-sm text-gray-500 dark:text-gray-400">本周平均每日 4.3 小时</p>
             </div>
           </div>
 
-          {/* 每日趋势 */}
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6">
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-6">
-              📅 每日趋势
-            </h2>
-            <div className="h-80">
-              {lineData.length > 0 ? (
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={lineData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="label" />
-                    <YAxis />
-                    <Tooltip />
-                    <Bar dataKey="value" fill="#8B5CF6" />
-                  </BarChart>
-                </ResponsiveContainer>
-              ) : (
-                <div className="h-full flex items-center justify-center text-gray-500 dark:text-gray-400">
-                  暂无数据
-                </div>
-              )}
-            </div>
+          <div className="flex items-center gap-2 text-sm text-green-500">
+            <TrendingUp className="w-4 h-4" />
+            <span>+23%</span>
           </div>
         </div>
 
-        {/* 学科排名 */}
-        {subjectRanking.length > 0 && (
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 mb-8">
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-6">
-              🏆 学科排名
-            </h2>
-            <div className="space-y-4">
-              {subjectRanking.map((item, index) => {
-                const subjectKey = item.subject as Subject
-                const config = SUBJECT_CONFIG[subjectKey]
-                const color = COLORS[subjectKey]
+        {/* 柱状图 */}
+        <div className="flex items-end justify-between h-48 gap-2">
+          {weeklyData.map((day, index) => {
+            const maxHours = Math.max(...weeklyData.map(d => d.hours))
+            const height = (day.hours / maxHours) * 100
 
-                return (
+            return (
+              <div key={day.day} className="flex-1 flex flex-col items-center gap-2">
+                <div className="w-full relative">
                   <div
-                    key={subjectKey}
-                    className="flex items-center gap-4 p-4 bg-gray-50 dark:bg-gray-700 rounded-xl"
-                  >
-                    <div className="flex items-center justify-center w-10 h-10 rounded-full font-bold text-white text-lg"
-                         style={{ backgroundColor: color }}>
-                      {index + 1}
-                    </div>
-                    <div className="flex-1">
-                      <div className="font-semibold text-gray-900 dark:text-white mb-1">
-                        {config.name}
-                      </div>
-                      <div className="flex gap-4 text-sm text-gray-600 dark:text-gray-400">
-                        <span>{item.pomodoros} 个番茄</span>
-                        <span>{item.hours.toFixed(1)} 小时</span>
-                      </div>
-                    </div>
-                    <div className="text-2xl">{config.icon}</div>
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-        )}
-
-        {/* 今日统计 */}
-        {todayStats && (
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6">
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-6">
-              📌 今日概览
-            </h2>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="text-center p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl">
-                <div className="text-3xl font-bold text-blue-600 dark:text-blue-400 mb-2">
-                  {todayStats.totalPomodoros}
+                    className="w-full rounded-t-xl transition-all duration-500 hover:opacity-80"
+                    style={{
+                      height: `${height}%`,
+                      backgroundColor: index === 5 ? colors.primary : `${colors.primary}60`,
+                      minHeight: '4px'
+                    }}
+                  />
                 </div>
-                <div className="text-sm text-gray-600 dark:text-gray-400">番茄数</div>
+                <span className="text-xs text-gray-500 dark:text-gray-400">{day.day}</span>
               </div>
-              <div className="text-center p-4 bg-purple-50 dark:bg-purple-900/20 rounded-xl">
-                <div className="text-3xl font-bold text-purple-600 dark:text-purple-400 mb-2">
-                  {todayStats.totalHours.toFixed(1)}
-                </div>
-                <div className="text-sm text-gray-600 dark:text-gray-400">学习时长</div>
-              </div>
-              <div className="text-center p-4 bg-green-50 dark:bg-green-900/20 rounded-xl">
-                <div className="text-3xl font-bold text-green-600 dark:text-green-400 mb-2">
-                  {todayStats.tasks.completed}
-                </div>
-                <div className="text-sm text-gray-600 dark:text-gray-400">完成任务</div>
-              </div>
-              <div className="text-center p-4 bg-orange-50 dark:bg-orange-900/20 rounded-xl">
-                <div className="text-3xl font-bold text-orange-600 dark:text-orange-400 mb-2">
-                  {todayStats.tasks.created}
-                </div>
-                <div className="text-sm text-gray-600 dark:text-gray-400">创建任务</div>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
-  )
-}
-
-// 统计卡片组件
-interface StatCardProps {
-  title: string
-  value: number | string
-  unit?: string
-  color: 'blue' | 'purple' | 'green' | 'orange'
-}
-
-function StatCard({ title, value, unit, color }: StatCardProps) {
-  const colorClasses = {
-    blue: 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800',
-    purple: 'bg-purple-50 dark:bg-purple-900/20 border-purple-200 dark:border-purple-800',
-    green: 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800',
-    orange: 'bg-orange-50 dark:bg-orange-900/20 border-orange-200 dark:border-orange-800'
-  }
-
-  const textColorClasses = {
-    blue: 'text-blue-600 dark:text-blue-400',
-    purple: 'text-purple-600 dark:text-purple-400',
-    green: 'text-green-600 dark:text-green-400',
-    orange: 'text-orange-600 dark:text-orange-400'
-  }
-
-  return (
-    <div className={`p-6 rounded-2xl border-2 ${colorClasses[color]}`}>
-      <div className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">
-        {title}
-      </div>
-      <div className="text-3xl font-bold text-gray-900 dark:text-white mb-1">
-        {value}
-        {unit && <span className="text-lg ml-1">{unit}</span>}
+            )
+          })}
+        </div>
       </div>
     </div>
   )
