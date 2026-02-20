@@ -363,7 +363,7 @@ export class TaskService {
         )
 
         return {
-          task,
+          task: task as Task,
           progress
         }
       })
