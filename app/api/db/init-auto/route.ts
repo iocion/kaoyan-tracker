@@ -30,8 +30,9 @@ export async function POST() {
     const userId = 'default'
 
     console.log('[DB Init] Starting database initialization...')
+    console.log('[DB Init] Database URL:', process.env.POSTGRES_PRISMA_URL?.substring(0, 30) + '...')
 
-    // 创建表结构（使用原始 SQL，比 prisma db push 更可靠）
+    // 步骤 1: 创建表结构
     try {
       console.log('[DB Init] Creating tables...')
 
@@ -46,6 +47,7 @@ export async function POST() {
           PRIMARY KEY ("id")
         );
       `)
+      console.log('[DB Init] User table created')
 
       // UserSettings 表
       await prisma.$executeRawUnsafe(`
@@ -65,6 +67,19 @@ export async function POST() {
           CONSTRAINT "UserSettings_userId_key" UNIQUE ("userId")
         );
       `)
+      console.log('[DB Init] UserSettings table created')
+
+      // 验证 UserSettings 表是否存在
+      try {
+        const result = await prisma.$queryRaw`
+          SELECT 1 FROM information_schema.tables
+          WHERE table_schema = 'public'
+          AND table_name = 'UserSettings'
+        `
+        console.log('[DB Init] UserSettings table verified:', Array.isArray(result) && result.length > 0)
+      } catch (verifyError) {
+        console.error('[DB Init] UserSettings verification failed:', verifyError)
+      }
 
       // Task 表
       await prisma.$executeRawUnsafe(`
@@ -83,6 +98,7 @@ export async function POST() {
           PRIMARY KEY ("id")
         );
       `)
+      console.log('[DB Init] Task table created')
 
       // 创建索引
       try {
@@ -114,6 +130,7 @@ export async function POST() {
           PRIMARY KEY ("id")
         );
       `)
+      console.log('[DB Init] Pomodoro table created')
 
       // 创建索引
       try {
@@ -151,6 +168,7 @@ export async function POST() {
           CONSTRAINT "DailyStat_userId_date_key" UNIQUE ("userId", "date")
         );
       `)
+      console.log('[DB Init] DailyStat table created')
 
       // StudyRecord 表
       await prisma.$executeRawUnsafe(`
@@ -165,6 +183,7 @@ export async function POST() {
           PRIMARY KEY ("id")
         );
       `)
+      console.log('[DB Init] StudyRecord table created')
 
       // 创建索引
       try {
@@ -175,7 +194,7 @@ export async function POST() {
         // 索引可能已存在，忽略
       }
 
-      console.log('[DB Init] Tables created successfully')
+      console.log('[DB Init] All tables created successfully')
     } catch (createError: any) {
       console.error('[DB Init] Failed to create tables:', createError)
       return NextResponse.json({
@@ -185,73 +204,113 @@ export async function POST() {
       }, { status: 500 })
     }
 
-    // 创建或更新用户
-    await prisma.user.upsert({
-      where: { id: userId },
-      update: {},
-      create: {
-        id: userId,
-        name: '考研人'
-      }
-    })
-    console.log('[DB Init] User created/updated')
+    // 步骤 2: 刷新 Prisma schema 缓存
+    try {
+      console.log('[DB Init] Refreshing Prisma client...')
+      await prisma.$disconnect()
+      await prisma.$connect()
+    } catch (error) {
+      console.warn('[DB Init] Failed to refresh Prisma client:', error)
+      // 继续执行，不影响
+    }
 
-    // 创建默认设置
-    await prisma.userSettings.upsert({
-      where: { userId },
-      update: {},
-      create: {
-        userId,
-        focusDuration: 25,
-        breakDuration: 5,
-        longBreakDuration: 15,
-        pomodorosUntilLongBreak: 4,
-        autoStartBreak: false,
-        autoStartFocus: false,
-        soundEnabled: true,
-        vibrationEnabled: true
-      }
-    })
-    console.log('[DB Init] UserSettings created/updated')
+    // 步骤 3: 创建或更新用户
+    try {
+      console.log('[DB Init] Creating/updating user...')
+      await prisma.user.upsert({
+        where: { id: userId },
+        update: {},
+        create: {
+          id: userId,
+          name: '考研人'
+        }
+      })
+      console.log('[DB Init] User created/updated')
+    } catch (userError: any) {
+      console.error('[DB Init] Failed to create user:', userError)
+      return NextResponse.json({
+        success: false,
+        error: '创建用户失败',
+        details: userError.message
+      }, { status: 500 })
+    }
 
-    // 创建示例任务
-    const sampleTasks = [
-      { title: '数据结构 - 复习二叉树', subject: Subject.COMPUTER_408, estimatedPomodoros: 2 },
-      { title: '高数 - 微积分练习', subject: Subject.MATH, estimatedPomodoros: 3 },
-      { title: '英语单词背诵', subject: Subject.ENGLISH, estimatedPomodoros: 1 },
-      { title: '马原复习', subject: Subject.POLITICS, estimatedPomodoros: 2 }
-    ]
+    // 步骤 4: 创建默认设置
+    try {
+      console.log('[DB Init] Creating/updating user settings...')
+      await prisma.userSettings.upsert({
+        where: { userId },
+        update: {},
+        create: {
+          userId,
+          focusDuration: 25,
+          breakDuration: 5,
+          longBreakDuration: 15,
+          pomodorosUntilLongBreak: 4,
+          autoStartBreak: false,
+          autoStartFocus: false,
+          soundEnabled: true,
+          vibrationEnabled: true
+        }
+      })
+      console.log('[DB Init] UserSettings created/updated')
+    } catch (settingsError: any) {
+      console.error('[DB Init] Failed to create user settings:', settingsError)
+      return NextResponse.json({
+        success: false,
+        error: '创建用户设置失败',
+        details: settingsError.message
+      }, { status: 500 })
+    }
 
-    let tasksCreated = 0
-    for (const task of sampleTasks) {
-      try {
-        await prisma.task.create({
-          data: {
-            userId,
-            ...task
+    // 步骤 5: 创建示例任务
+    try {
+      console.log('[DB Init] Creating sample tasks...')
+      const sampleTasks = [
+        { title: '数据结构 - 复习二叉树', subject: Subject.COMPUTER_408, estimatedPomodoros: 2 },
+        { title: '高数 - 微积分练习', subject: Subject.MATH, estimatedPomodoros: 3 },
+        { title: '英语单词背诵', subject: Subject.ENGLISH, estimatedPomodoros: 1 },
+        { title: '马原复习', subject: Subject.POLITICS, estimatedPomodoros: 2 }
+      ]
+
+      let tasksCreated = 0
+      for (const task of sampleTasks) {
+        try {
+          await prisma.task.create({
+            data: {
+              userId,
+              ...task
+            }
+          })
+          tasksCreated++
+        } catch (error: any) {
+          // 如果任务已存在，跳过
+          if (error.code === 'P2002') {
+            console.log(`[DB Init] Task already exists: ${task.title}`)
+          } else {
+            console.error(`[DB Init] Failed to create task: ${task.title}`, error)
           }
-        })
-        tasksCreated++
-      } catch (error: any) {
-        // 如果任务已存在，跳过
-        if (error.code === 'P2002') {
-          console.log(`[DB Init] Task already exists: ${task.title}`)
-        } else {
-          console.error(`[DB Init] Failed to create task: ${task.title}`, error)
         }
       }
-    }
-    console.log(`[DB Init] Created ${tasksCreated} sample tasks`)
+      console.log(`[DB Init] Created ${tasksCreated} sample tasks`)
 
-    return NextResponse.json({
-      success: true,
-      message: '数据库初始化成功',
-      data: {
-        userId,
-        tasksCreated,
-        timestamp: new Date().toISOString()
-      }
-    })
+      return NextResponse.json({
+        success: true,
+        message: '数据库初始化成功',
+        data: {
+          userId,
+          tasksCreated,
+          timestamp: new Date().toISOString()
+        }
+      })
+    } catch (tasksError: any) {
+      console.error('[DB Init] Failed to create sample tasks:', tasksError)
+      return NextResponse.json({
+        success: false,
+        error: '创建示例任务失败',
+        details: tasksError.message
+      }, { status: 500 })
+    }
   } catch (error) {
     console.error('[DB Init] Initialization failed:', error)
 
