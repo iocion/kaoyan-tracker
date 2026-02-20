@@ -5,16 +5,30 @@ import { Subject } from '@prisma/client'
 export const dynamic = 'force-dynamic'
 
 /**
- * POST /api/db/init
+ * GET /api/db/init
  * 自动初始化数据库表和用户数据
  *
- * 这个端点会：
+ * 访问此端点会自动：
  * 1. 检查表是否存在
  * 2. 如果不存在，自动创建所有表
  * 3. 创建默认用户和设置
  * 4. 创建示例任务
+ *
+ * 只需在浏览器中访问即可！
+ */
+export async function GET() {
+  return await initDatabase()
+}
+
+/**
+ * POST /api/db/init
+ * 与 GET 相同的功能，方便通过脚本调用
  */
 export async function POST() {
+  return await initDatabase()
+}
+
+async function initDatabase() {
   try {
     const userId = 'default'
 
@@ -39,7 +53,7 @@ export async function POST() {
                 "id" TEXT NOT NULL,
                 "name" TEXT NOT NULL DEFAULT '考研人',
                 "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                "updatedAt" TIMESTAMP(3) NOT NULL,
+                "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
                 PRIMARY KEY ("id")
             );
@@ -219,42 +233,5 @@ export async function POST() {
       error: '数据库初始化失败',
       details: error instanceof Error ? error.message : String(error)
     }, { status: 500 })
-  }
-}
-
-/**
- * GET /api/db/init
- * 检查数据库是否已初始化
- */
-export async function GET() {
-  try {
-    const userId = 'default'
-
-    // 检查用户是否存在
-    const user = await prisma.user.findUnique({
-      where: { id: userId }
-    })
-
-    // 检查任务数量
-    const taskCount = await prisma.task.count({
-      where: { userId }
-    })
-
-    return NextResponse.json({
-      success: true,
-      data: {
-        initialized: !!user,
-        userId,
-        taskCount
-      }
-    })
-  } catch (error) {
-    return NextResponse.json({
-      success: true,
-      data: {
-        initialized: false,
-        error: '数据库未初始化'
-      }
-    })
   }
 }
