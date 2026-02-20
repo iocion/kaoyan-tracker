@@ -16,6 +16,15 @@
 }
 
 @layer utilities {
+  /* iOS 安全区域支持 */
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom, 20px);
+  }
+
+  .pt-safe {
+    padding-top: env(safe-area-inset-top, 20px);
+  }
+
   .glass {
     @apply bg-white/80 backdrop-blur-xl;
   }
@@ -34,5 +43,18 @@
 
   .gradient-card {
     @apply bg-gradient-to-br from-white to-apple-gray-50;
+  }
+
+  /* 触摸优化 */
+  .touch-manipulation {
+    touch-action: manipulation;
+  }
+
+  /* 禁用文本选择（适合移动端） */
+  .select-none {
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
   }
 }

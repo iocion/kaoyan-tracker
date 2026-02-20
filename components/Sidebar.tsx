@@ -75,13 +75,13 @@ export function Sidebar() {
 
   return (
     <aside className={`
-      fixed left-0 top-0 bottom-0 w-64 h-full
+      fixed left-0 top-0 bottom-0 h-full
       z-50
       transition-all duration-300 ease-in-out
       ${isCollapsed ? 'w-20' : 'w-64'}
       backdrop-blur-xl bg-white/80 dark:bg-black/80
       border-r border-black/10
-      ${isCollapsed ? 'translate-x-0' : 'translate-x-0'}
+      hidden md:block
     `}>
       {/* 顶部工具栏 */}
       <div className="p-4 border-b border-black/5">

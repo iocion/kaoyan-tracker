@@ -37,6 +37,7 @@ export const colors = {
   success: '#34c759',
   warning: '#f59e0b',
   error: '#ef4444',
+  danger: '#ef4444',
   info: '#3b82f6',
 
   // 学科颜色
