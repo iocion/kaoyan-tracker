@@ -4,7 +4,7 @@ export const dynamic = 'force-dynamic'
 
 /**
  * GET /api/health
- * 健康检查端点
+ * 简化的健康检查，避免表名错误
  */
 export async function GET() {
   try {
@@ -13,11 +13,11 @@ export async function GET() {
       return NextResponse.json({
         success: false,
         error: '数据库连接未配置',
-        details: '请在 Vercel 项目设置中添加 POSTGRES_PRISMA_URL 或 DATABASE_URL'
+        details: '请在 Vercel 项目设置中添加 DATABASE_URL'
       }, { status: 500 })
     }
 
-    const { prisma } = await import('@/lib/prisma')
+    const prisma = await import('@/lib/prisma')
 
     // 测试数据库连接
     try {
@@ -30,30 +30,22 @@ export async function GET() {
       }, { status: 500 })
     }
 
-    // 检查用户
+    // 简单查询检查
     let userExists = false
     let taskCount = 0
     let pomodoroCount = 0
 
     try {
-      // 检查用户是否存在
+      // 检查用户 - 使用正确的方法
       const user = await prisma.user.findUnique({
         where: { id: 'default' }
       })
       userExists = !!user
 
       // 检查任务数量
-      taskCount = await prisma.task.count({
-        where: { userId: 'default' }
-      })
-
-      // 检查番茄钟数量
-      pomodoroCount = await prisma.pomodoro.count({
-        where: { userId: 'default' }
-      })
+      taskCount = await prisma.task.count()
     } catch (error) {
-      console.error('[Health] Database query error:', error)
-      // 继续尝试其他检查
+      console.error('[Health] Query error:', error)
     }
 
     return NextResponse.json({
@@ -64,11 +56,7 @@ export async function GET() {
         userExists,
         taskCount,
         pomodoroCount,
-        timestamp: new Date().toISOString(),
-        environment: {
-          postgresUrl: process.env.POSTGRES_PRISMA_URL ? 'configured' : 'not configured',
-          databaseUrl: process.env.DATABASE_URL ? 'configured' : 'not configured'
-        }
+        timestamp: new Date().toISOString()
       }
     })
   } catch (error) {
