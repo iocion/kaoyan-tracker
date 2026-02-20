@@ -73,27 +73,52 @@ export async function POST(req: NextRequest) {
 export async function PATCH(req: NextRequest) {
   try {
     const body = await req.json()
-    const { action } = body
+    const { action, id } = body
 
     switch (action) {
       case 'pause':
-        await pomodoroPauseSchema.parseAsync(body)
-        const paused = await PomodoroService.pause(body.id)
+        // 如果没有提供 id，使用当前活跃的
+        const pomodoroId = id || (await PomodoroService.getActive())?.id
+        if (!pomodoroId) {
+          return NextResponse.json(
+            { success: false, error: '没有正在进行的番茄钟' },
+            { status: 400 }
+          )
+        }
+        const paused = await PomodoroService.pause(pomodoroId)
         return NextResponse.json({ success: true, data: paused })
 
       case 'resume':
-        await pomodoroResumeSchema.parseAsync(body)
-        const resumed = await PomodoroService.resume(body.id)
+        const resumeId = id || (await PomodoroService.getActive())?.id
+        if (!resumeId) {
+          return NextResponse.json(
+            { success: false, error: '没有正在进行的番茄钟' },
+            { status: 400 }
+          )
+        }
+        const resumed = await PomodoroService.resume(resumeId)
         return NextResponse.json({ success: true, data: resumed })
 
       case 'complete':
-        await pomodoroCompleteSchema.parseAsync(body)
-        const completed = await PomodoroService.complete(body.id)
+        const completeId = id || (await PomodoroService.getActive())?.id
+        if (!completeId) {
+          return NextResponse.json(
+            { success: false, error: '没有正在进行的番茄钟' },
+            { status: 400 }
+          )
+        }
+        const completed = await PomodoroService.complete(completeId)
         return NextResponse.json({ success: true, data: completed })
 
       case 'cancel':
-        await pomodoroCancelSchema.parseAsync(body)
-        const cancelled = await PomodoroService.cancel(body.id)
+        const cancelId = id || (await PomodoroService.getActive())?.id
+        if (!cancelId) {
+          return NextResponse.json(
+            { success: false, error: '没有正在进行的番茄钟' },
+            { status: 400 }
+          )
+        }
+        const cancelled = await PomodoroService.cancel(cancelId)
         return NextResponse.json({ success: true, data: cancelled })
 
       case 'update':

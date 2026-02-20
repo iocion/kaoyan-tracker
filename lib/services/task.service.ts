@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/prisma'
-import { Task, TaskCreateInput, TaskUpdateInput, Subject } from '@/types'
+import { Task, TaskCreateInput, TaskUpdateInput } from '@/types'
+import { Subject } from '@prisma/client'
 import { DEFAULT_USER_ID } from '@/lib/constants'
 
 export class TaskService {

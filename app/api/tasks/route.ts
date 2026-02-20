@@ -128,6 +128,27 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ success: true, data: task })
     }
 
+    if (action === 'toggle') {
+      const { id, isCompleted } = body
+      const task = await TaskService.update(id, { isCompleted })
+      return NextResponse.json({ success: true, data: task })
+    }
+
+    if (action === 'updatePomodoroCount') {
+      const { id } = body
+      const task = await TaskService.getById(id)
+      if (!task) {
+        return NextResponse.json(
+          { success: false, error: '任务不存在' },
+          { status: 404 }
+        )
+      }
+      const updatedTask = await TaskService.update(id, {
+        completedPomodoros: task.completedPomodoros + 1
+      } as any)
+      return NextResponse.json({ success: true, data: updatedTask })
+    }
+
     return NextResponse.json(
       {
         success: false,

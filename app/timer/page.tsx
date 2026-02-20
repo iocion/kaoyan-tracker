@@ -1,8 +1,24 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Play, Pause, RotateCcw, Check, SkipForward } from 'lucide-react'
+import { Play, Pause, RotateCcw, SkipForward, Plus } from 'lucide-react'
 import { colors } from '@/lib/styles/colors'
+
+interface PomodoroData {
+  id: string
+  taskId?: string | null
+  type: 'FOCUS' | 'BREAK' | 'LONG_BREAK'
+  status: 'RUNNING' | 'PAUSED' | 'COMPLETED' | 'CANCELLED'
+  duration: number
+  elapsedTime: number
+  startedAt: string
+}
+
+interface Task {
+  id: string
+  title: string
+  subject: string
+}
 
 /**
  * Apple 风格番茄钟页面
@@ -12,8 +28,19 @@ export default function TimerPage() {
   const [timeLeft, setTimeLeft] = useState(25 * 60) // 25 minutes in seconds
   const [isRunning, setIsRunning] = useState(false)
   const [progress, setProgress] = useState(0)
+  const [currentTask, setCurrentTask] = useState<Task | null>(null)
+  const [showTaskList, setShowTaskList] = useState(false)
+  const [tasks, setTasks] = useState<Task[]>([])
+  const [sessionStarted, setSessionStarted] = useState(false)
   const totalTime = 25 * 60
 
+  // 加载当前活跃任务
+  useEffect(() => {
+    loadActiveTask()
+    loadTasks()
+  }, [])
+
+  // 计时器逻辑
   useEffect(() => {
     let interval: NodeJS.Timeout
 
@@ -25,12 +52,121 @@ export default function TimerPage() {
           return newTime
         })
       }, 1000)
-    } else if (timeLeft === 0) {
-      setIsRunning(false)
+    } else if (timeLeft === 0 && isRunning) {
+      // 番茄钟完成
+      handleComplete()
     }
 
     return () => clearInterval(interval)
   }, [isRunning, timeLeft, totalTime])
+
+  const loadActiveTask = async () => {
+    try {
+      const response = await fetch('/api/tasks')
+      const data = await response.json()
+
+      if (data.success && data.data) {
+        const activeTask = data.data.find((t: Task) => (t as any).isActive)
+        if (activeTask) {
+          setCurrentTask(activeTask)
+        }
+      }
+    } catch (error) {
+      console.error('加载任务失败:', error)
+    }
+  }
+
+  const loadTasks = async () => {
+    try {
+      const response = await fetch('/api/tasks')
+      const data = await response.json()
+
+      if (data.success && data.data) {
+        setTasks(data.data.filter((t: Task) => !(t as any).isCompleted))
+      }
+    } catch (error) {
+      console.error('加载任务列表失败:', error)
+    }
+  }
+
+  const startSession = async () => {
+    setSessionStarted(true)
+
+    try {
+      const response = await fetch('/api/pomodoro', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'FOCUS',
+          duration: totalTime,
+          taskId: currentTask?.id || null,
+        }),
+      })
+
+      const data = await response.json()
+      if (!data.success) {
+        console.error('开始会话失败:', data.error)
+      }
+    } catch (error) {
+      console.error('开始会话失败:', error)
+    }
+  }
+
+  const handleComplete = async () => {
+    setIsRunning(false)
+
+    try {
+      const response = await fetch('/api/pomodoro', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'complete',
+        }),
+      })
+
+      const data = await response.json()
+      if (data.success) {
+        // 如果有任务关联，更新任务的番茄数
+        if (currentTask) {
+          await fetch('/api/tasks', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              action: 'updatePomodoroCount',
+              id: currentTask.id,
+            }),
+          })
+        }
+      }
+    } catch (error) {
+      console.error('完成会话失败:', error)
+    }
+  }
+
+  const toggleTimer = async () => {
+    if (!sessionStarted && !isRunning) {
+      await startSession()
+    }
+
+    setIsRunning(!isRunning)
+
+    try {
+      const action = isRunning ? 'pause' : 'resume'
+      await fetch('/api/pomodoro', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action }),
+      })
+    } catch (error) {
+      console.error('更新会话状态失败:', error)
+    }
+  }
+
+  const resetTimer = () => {
+    setIsRunning(false)
+    setTimeLeft(25 * 60)
+    setProgress(0)
+  }
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60)
@@ -38,14 +174,9 @@ export default function TimerPage() {
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
   }
 
-  const toggleTimer = () => {
-    setIsRunning(!isRunning)
-  }
-
-  const resetTimer = () => {
-    setIsRunning(false)
-    setTimeLeft(25 * 60)
-    setProgress(0)
+  const selectTask = (task: Task) => {
+    setCurrentTask(task)
+    setShowTaskList(false)
   }
 
   // 圆环进度计算
@@ -125,6 +256,7 @@ export default function TimerPage() {
         </button>
 
         <button
+          onClick={resetTimer}
           className="w-16 h-16 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
         >
           <SkipForward className="w-6 h-6 text-gray-600 dark:text-gray-300" />
@@ -132,26 +264,81 @@ export default function TimerPage() {
       </div>
 
       {/* 当前任务 */}
-      <div className="bg-white dark:bg-gray-900 rounded-3xl p-6 shadow-sm">
+      <div className="bg-white dark:bg-gray-900 rounded-3xl p-6 shadow-sm relative">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white">当前任务</h3>
-          <button className="text-[#60a5fa] hover:text-[#3b82f6] text-sm font-medium">
-            切换任务
-          </button>
+
+          {/* 任务选择器 */}
+          <div className="relative">
+            <button
+              onClick={() => setShowTaskList(!showTaskList)}
+              className="text-[#60a5fa] hover:text-[#3b82f6] text-sm font-medium flex items-center gap-1"
+            >
+              {currentTask ? '切换任务' : '选择任务'}
+              <Plus className="w-4 h-4" />
+            </button>
+
+            {/* 任务下拉列表 */}
+            {showTaskList && (
+              <div className="absolute right-0 top-10 w-64 bg-white dark:bg-gray-900 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-800 z-50 overflow-hidden">
+                {tasks.length === 0 ? (
+                  <div className="p-4 text-center text-gray-500 dark:text-gray-400">
+                    没有可用任务
+                  </div>
+                ) : (
+                  <div className="max-h-64 overflow-y-auto">
+                    <div
+                      onClick={() => selectTask(null as any)}
+                      className={`p-3 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors ${
+                        !currentTask ? 'bg-[#60a5fa]/10' : ''
+                      }`}
+                    >
+                      <div className="text-sm font-medium text-gray-900 dark:text-white">
+                        无任务
+                      </div>
+                    </div>
+                    {tasks.map((task) => (
+                      <div
+                        key={task.id}
+                        onClick={() => selectTask(task)}
+                        className={`p-3 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors ${
+                          currentTask?.id === task.id ? 'bg-[#60a5fa]/10' : ''
+                        }`}
+                      >
+                        <div className="text-sm font-medium text-gray-900 dark:text-white">
+                          {task.title}
+                        </div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                          {task.subject}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         </div>
 
-        <div className="flex items-center gap-4 p-4 rounded-2xl bg-gray-50 dark:bg-gray-800">
-          <div className="w-12 h-12 rounded-xl bg-[#60a5fa] flex items-center justify-center">
-            <span className="text-white font-bold">408</span>
+        {currentTask ? (
+          <div className="flex items-center gap-4 p-4 rounded-2xl bg-gray-50 dark:bg-gray-800">
+            <div className="w-12 h-12 rounded-xl bg-[#60a5fa] flex items-center justify-center">
+              <span className="text-white font-bold text-sm">408</span>
+            </div>
+            <div className="flex-1">
+              <div className="font-medium text-gray-900 dark:text-white">{currentTask.title}</div>
+              <div className="text-sm text-gray-500 dark:text-gray-400">
+                {currentTask.subject}
+              </div>
+            </div>
           </div>
-          <div className="flex-1">
-            <div className="font-medium text-gray-900 dark:text-white">数据结构 - 复习二叉树</div>
-            <div className="text-sm text-gray-500 dark:text-gray-400">预计 2 个番茄 · 已完成 1 个</div>
+        ) : (
+          <div className="flex items-center gap-4 p-4 rounded-2xl bg-gray-50 dark:bg-gray-800">
+            <div className="flex-1 text-center text-gray-500 dark:text-gray-400">
+              点击上方按钮选择任务
+            </div>
           </div>
-          <div className="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center">
-            <Check className="w-4 h-4 text-white" />
-          </div>
-        </div>
+        )}
       </div>
 
       {/* 统计信息 */}
